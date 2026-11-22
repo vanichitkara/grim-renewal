@@ -10,6 +10,12 @@ import { createBrowserAdapter, createPlaywrightMcpDriver } from '../agents/adapt
 export const BRIDGE = 'http://127.0.0.1:8787';
 export const STORE_KEY = 'grim_bridge_token';
 
+/** Set by the Vite dev server only (see src/server/dev-env.ts). Empty in every built site. */
+declare const __GRIM_DEV_BRIDGE_TOKEN__: string | undefined;
+function devToken(): string {
+  return typeof __GRIM_DEV_BRIDGE_TOKEN__ === 'string' ? __GRIM_DEV_BRIDGE_TOKEN__ : '';
+}
+
 export type BridgeStatus = 'connected' | 'not_found' | 'wrong_token';
 
 export const STATUS_LABEL: Record<BridgeStatus, string> = {
@@ -43,7 +49,8 @@ export function getBridgeToken(): string {
   const s = sessionStorage.getItem(STORE_KEY);
   if (s) return s;
   const g = (globalThis as { GRIM_BRIDGE_TOKEN?: unknown }).GRIM_BRIDGE_TOKEN;
-  return typeof g === 'string' ? g : '';
+  if (typeof g === 'string' && g) return g;
+  return devToken(); // from .env, dev server only: every local sign-in connects by itself
 }
 
 function makeBrowserAdapter(secret: string): CancelAdapter {
@@ -61,6 +68,23 @@ function makeBrowserAdapter(secret: string): CancelAdapter {
 export function getBrowserAdapter(): CancelAdapter | null {
   const s = getBridgeToken();
   return s ? makeBrowserAdapter(s) : null;
+}
+
+/** True on a developer's own machine, where a local bridge can exist. A hosted site never has one. */
+export function isLocalHost(hostname: string): boolean {
+  return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]';
+}
+
+/**
+ * What the header chip shows. A hosted site cannot reach a bridge on a visitor's machine,
+ * so it shows nothing instead of a scary "not connected".
+ */
+export function chipView(status: BridgeStatus, hostname: string): { text: string; hidden: boolean } {
+  if (status === 'connected') return { text: STATUS_LABEL.connected, hidden: false };
+  if (!isLocalHost(hostname)) return { text: '', hidden: true };
+  return status === 'wrong_token'
+    ? { text: 'Browser cancels: key out of date. Run: npm run bridge', hidden: false }
+    : { text: 'Browser cancels: off. Run: npm run bridge', hidden: false };
 }
 
 /** Probes /health in every mode. Registers the browser adapter on success. */

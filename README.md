@@ -7,8 +7,9 @@ and sends the Reaper to cancel them — while you watch and approve every step.
 
 ## Live site
 
-- Landing page: https://vanichitkara.github.io/grim-renewal/landing.html
-- Try the demo (fake subscriptions, no sign-in): https://vanichitkara.github.io/grim-renewal/index.html?demo
+- Open the site (landing page first): https://vanichitkara.github.io/grim-renewal/
+- The app: https://vanichitkara.github.io/grim-renewal/app.html. It stays locked until you sign in with Google.
+- Demo (fake subscriptions, no sign-in): https://vanichitkara.github.io/grim-renewal/app.html?demo. The demo links on the landing page are temporary and will be removed before launch.
 - Every push to `main` runs the tests, builds, and publishes through `.github/workflows/pages.yml`.
 - Gmail sign-in runs in Google "testing" mode: only listed test users can connect.
 
@@ -31,7 +32,7 @@ and the app gives you the phone number, a call script, and a chargeback letter t
 
 ```bash
 npm install
-npm run dev        # opens the landing page; the app is at http://localhost:5173/
+npm run dev        # opens the landing page; the app is at http://localhost:5173/app.html
 npm test           # receipt parser + property-based tests
 npm run typecheck  # TypeScript strict check
 ```
@@ -63,7 +64,7 @@ src/
   agents/
     coroner.ts                  Forgotten score computation
     event-bus.ts                Shared in-memory event bus
-  ui/                           App UI (index.html + components)
+  ui/                           index.html = landing page, app.html = the app (sign-in gate), components
 
 public/
   reaper.html                   Standalone animation prototype (Grim Renewal)
@@ -75,18 +76,31 @@ docs/
   week-plan.md                  4-week build plan + demo video script
 ```
 
-## Browser cancels (optional)
+## Browser cancels (optional, on your own computer)
 
-1. Run `npm run bridge`. It opens a headed Playwright browser and prints a link like `http://localhost:5173/#bridge=<key>`.
-2. Start the app (`npm run dev`) and open that printed link. The page saves the key for this tab and hides it from the URL, so the Google redirect keeps it.
-   You can also paste the key in the Tuning panel ("Browser bridge key").
-3. Look at the chip in the header: "Browser: connected". Other chips: "bridge not found" (run step 1) or "wrong token" (open the newest link).
-4. Test without a real merchant: open `http://localhost:5173/?bridgetest` and press "Test the browser bridge". Add `&login=1` to check that a password page stops the run.
+The browser bridge is a small program that runs on YOUR machine and opens a visible Playwright browser.
+A website on the internet cannot reach it, so a hosted copy of this app never shows a bridge message.
+
+1. Run `npm run bridge` once. It makes a key, saves it in `.env` (git-ignored), and opens a headed browser.
+2. Start the dev server (`npm run dev`) and open the app. The dev server reads the key from `.env`
+   and gives it to the page, so **every sign-in connects by itself**. No pasting, no link.
+   (If you started the dev server before the key existed, restart it once.)
+3. The header chip says "Browser: connected". If the bridge is off, on your machine it says
+   "Browser cancels: off. Run: npm run bridge". On a hosted site it shows nothing.
+4. Test without a real merchant: open `http://localhost:5173/app.html?demo&bridgetest` and press
+   "Test the browser bridge". Add `&login=1` to check that a password page stops the run.
 5. Trouble? `npm run bridge:check`. If no browser is found: `npx playwright install chromium`.
+   A key from the printed link (`app.html#bridge=<key>`) or the Tuning panel still works and wins.
+
+Where the key lives:
+- `.env` on your machine only. `.env.example` shows the shape. The file is git-ignored.
+- The key goes into the page only from the dev server. `vite build` never includes it (a test checks this),
+  because a built site is public.
+- Do not add it to Vercel or GitHub as a `VITE_` variable. Anything the browser can read is public.
 
 The bridge listens on 127.0.0.1 only and accepts pages from `localhost:5173` and `127.0.0.1:5173`.
 Never automated: password fields (login pages stop the run) and any click you have not approved.
-Without the bridge, browser cancels stay stubbed.
+Without the bridge, browser cancels stay off and the Boss Door guide is used instead.
 
 ## Kiro Crew Agents
 

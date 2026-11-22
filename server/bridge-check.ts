@@ -23,5 +23,5 @@ const found = roots.flatMap((r) => readdirSync(r).filter((d) => d.startsWith('ch
 console.log(found.length ? 'Playwright browser: found' : 'Playwright browser: NOT found. Run: npx playwright install chromium');
 
 console.log('Open the link that "npm run bridge" prints, like:');
-console.log('  http://localhost:5173/#bridge=<key>');
-console.log('Then check the chip says "Browser: connected". Test with: http://localhost:5173/?bridgetest');
+console.log('  http://localhost:5173/app.html#bridge=<key>');
+console.log('Then check the chip says "Browser: connected". Test with: http://localhost:5173/app.html?demo&bridgetest');

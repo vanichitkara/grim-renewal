@@ -12,7 +12,7 @@ Ship a demo-ready app for the Costume Contest. Judges see:
 ## Week 1 — Animation First
 **Goal:** A working hallway with fake data that looks good enough to keep.
 
-- [ ] Port `reaper.html` → `src/ui/index.html` (done — see `public/reaper.html`)
+- [ ] Port `reaper.html` → `src/ui/app.html` (done — see `public/reaper.html`)
 - [ ] Extract animation into `src/animation/` (tween, ease, draw functions)
 - [ ] Add the `src/types.ts` event bus hook (animation waits on `AgentEvent`)
 - [ ] Add a `?debug` query param to show/hide the tuning panel ✓
@@ -144,13 +144,13 @@ Final frame: the hallway, four tombstones, $995.64/yr saved.
   "Clawed back" total in the stats row. Also wire `emitRevenants` into the real rescan
   (today it only runs from the demo's debug button).
   When this ships, put the dispute wording back on the landing page Revenants card
-  (`src/ui/landing.html`, features row), which now says "Preview in the demo".
+  (`src/ui/index.html`, the landing page, features row), which now says "Preview in the demo".
 - [ ] **Ghosts: dormant-account detection** (build if time allows). Today only the forgotten
   score exists (`src/agents/coroner.ts`, driven by stub signals in `src/pipeline/activity-scout.ts`).
   To build: a real activity-signal pass in Gmail (login alerts, usage emails per merchant), then
   flag accounts that hold a card or data but show no activity as Ghosts, with a Ghosts view or
   badge. The landing page Ghosts card was reworded to match what is built and says this is
-  "coming soon"; when Ghosts ships, restore the dormant-account wording in `src/ui/landing.html`.
+  "coming soon"; when Ghosts ships, restore the dormant-account wording in `src/ui/index.html` (the landing page).
 
 ---
 
@@ -165,3 +165,24 @@ Final frame: the hallway, four tombstones, $995.64/yr saved.
   - Remove the invented "Tuesday mornings have the shortest wait" line from the Boss Door panel unless a source is found.
   - `docs/phone-agent.md`: how a real AI call would work, and the legal limits (FCC 24-17 treats AI voices as "artificial voice" under the TCPA; California AI-voice disclosure and all-party recording consent; identity checks hand the call to the user).
 - [ ] Then: Revenant dispute flow, then Ghosts detection (above).
+
+---
+
+## Decisions (2026-11-22)
+
+- **Landing page first.** `src/ui/index.html` is the landing page and is what the live site opens. The app is `src/ui/app.html`. A Google sign-in return that lands on the site root is handed to `app.html` by a small script in the landing page, so the redirect URI registered in Google Cloud stays the site root.
+- **Sign-in gate.** `app.html` starts locked (`<body class="locked">`). Only a returning sign-in token or `?demo` unlocks it. This is a UI gate, not a server check: the app has no server and holds no data.
+- [ ] **REMOVE THE DEMO FROM THE LANDING PAGE before launch.** Demo is fine for now. Search for `TODO(remove-demo)`: three links in `src/ui/index.html` (nav "Demo", hero "Try the demo", footer link), one test line in `src/ui/landing.test.ts`, and the demo branch in `src/ui/app.html`. Decide at that time whether the `?demo` path itself stays for judges or goes.
+- Hosting: GitHub Pages stays. Vercel's free Hobby plan is for personal, non-commercial use only; a hackathon project fits, a paid product would not.
+
+- [ ] **Hosted browser for real cancels (decide later).** The local bridge only works on the
+  developer's own machine. For visitors on the live site, "every login connects to a browser"
+  needs a browser that runs on a server, which is a separate piece of work:
+  1. a paid hosted-browser service (the provider's API key is a server-side secret);
+  2. a serverless function with a headless Chromium (short time limits, and the user cannot
+     watch a visible window, so the page would have to stream pictures of it);
+  3. keep the local bridge as a power-user option and give hosted users the guided cancel
+     (script, links, Cancellation Player on mock sites) until then.
+  Whatever is chosen, its secret lives in the host's SERVER-side settings, never in a `VITE_` variable.
+  Hosting stays on GitHub Pages for now (free, already live). Vercel Hobby is free for
+  personal, non-commercial use only.

@@ -3,13 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<script>window.GRIM_CLIENT_ID = "734928104915-q17khqcla05jtilaui4tmha5hat0qaaa.apps.googleusercontent.com";</script>
-<title>Grim Renewal</title>
+<title>Grim Renewal — Make sure the dead stay dead.</title>
+<meta name="description" content="Grim Renewal finds your forgotten subscriptions and sends the Reaper to cancel them while you watch and approve.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600;700&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<script>
+/* Google sends the user back to the site root. Hand that return to the app page. */
+if (/[#&](access_token|error|bridge)=/.test(location.hash)) location.replace('./app.html' + location.search + location.hash);
+</script>
 <style>
-/* Grim Renewal — TypeScript module build */
 :root {
   --night:  #120e1c;
   --crypt:  #1c162b;
@@ -20,606 +23,219 @@
   --rot:    #8fc25a;
   --blood:  #e0574f;
   --spirit: #c99bff;
+  --torch:  #ff9a3c;
   --display: "Pixelify Sans", "Courier New", monospace;
   --body:    "Atkinson Hyperlegible", system-ui, sans-serif;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
-[hidden] { display: none !important; }
-.sr-only {
-  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
-  overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
-}
-body {
-  background: var(--night);
-  color: var(--bone);
-  font-family: var(--body);
-  font-size: 15px;
-  line-height: 1.5;
-}
-.wrap {
-  max-width: 1040px;
-  margin: 0 auto;
-  padding-block: 24px 48px;
-  padding-left: max(16px, env(safe-area-inset-left, 0px));
-  padding-right: max(16px, env(safe-area-inset-right, 0px));
-  display: grid;
-  gap: 20px;
-}
-header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 20px; }
-h1 { font-family: var(--display); font-weight: 700; font-size: clamp(26px, 4vw, 38px); margin: 0; letter-spacing: 0.5px; text-wrap: balance; }
-.tagline { color: var(--mist); margin: 0; max-width: 60ch; }
-.proto { font-family: var(--display); font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--coin); border: 1px solid var(--stone); padding: 3px 8px; border-radius: 3px; white-space: nowrap; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--night); color: var(--bone); font-family: var(--body); font-size: 17px; line-height: 1.6; }
+a { color: var(--spirit); }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--coin); outline-offset: 3px; }
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+.skip { position: absolute; left: 8px; top: -60px; background: var(--coin); color: var(--night); padding: 8px 14px; border-radius: 3px; z-index: 10; font-weight: 700; }
+.skip:focus { top: 8px; }
+.wrap { max-width: 1040px; margin: 0 auto; padding: 0 20px; }
+h1, h2, h3 { font-family: var(--display); margin: 0; text-wrap: balance; }
+h2 { font-size: clamp(26px, 4vw, 36px); color: var(--bone); margin-bottom: 8px; }
+h3 { font-size: 20px; color: var(--coin); margin-bottom: 4px; }
+p { margin: 0 0 12px; }
+section { padding: 56px 0; border-top: 2px solid var(--stone); }
+.lede { color: var(--mist); max-width: 62ch; margin-bottom: 28px; }
 
-/* Stage — 480×220 native, scaled up with CSS only */
-.stage { position: relative; width: 100%; max-width: 100%; aspect-ratio: 480 / 220; border: 2px solid var(--stone); border-radius: 4px; overflow: hidden; background: var(--crypt); }
-#stage { display: block; width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; }
-.tag {
-  position: absolute; transform: translate(-50%, -100%);
-  width: 19%; text-align: center; pointer-events: none;
-  font-family: var(--display); font-size: clamp(8px, 1.45vw, 13px); line-height: 1.2;
-  text-shadow: 0 1px 0 #000, 0 0 4px #000;
+/* Header */
+.top { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 0; }
+.brand { font-family: var(--display); font-weight: 700; font-size: 20px; color: var(--bone); text-decoration: none; }
+.top nav { display: flex; gap: 18px; flex-wrap: wrap; }
+.top nav a { color: var(--mist); text-decoration: none; font-weight: 700; }
+.top nav a:hover { color: var(--bone); text-decoration: underline; }
+
+/* Hero */
+.hero { position: relative; overflow: hidden; border-top: 0; padding: 0 0 40px;
+  background: radial-gradient(ellipse at 50% 100%, rgba(255,154,60,.14), transparent 60%), linear-gradient(var(--night), var(--crypt)); }
+.scene { position: relative; width: 100%; aspect-ratio: 480 / 220; max-height: 460px; margin: 8px 0 24px; border: 2px solid var(--stone); border-radius: 4px; overflow: hidden; background: var(--crypt); }
+#scene { display: block; width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; }
+.hero-copy { text-align: center; }
+.hero h1 { font-weight: 700; font-size: clamp(44px, 9vw, 88px); line-height: 1; letter-spacing: 1px; color: var(--bone);
+  text-shadow: 0 0 18px rgba(255,154,60,.55), 0 4px 0 var(--stone); }
+.hero h1 span { color: var(--blood); }
+.tagline { font-family: var(--display); font-size: clamp(20px, 3vw, 28px); color: var(--coin); margin: 14px 0 6px; }
+.sub { color: var(--mist); max-width: 52ch; margin: 0 auto 26px; }
+.cta { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; }
+.btn { display: inline-block; font-family: var(--display); font-weight: 700; font-size: 18px; text-decoration: none; padding: 12px 24px; border-radius: 4px; border: 2px solid var(--coin); }
+.btn-primary { background: var(--coin); color: var(--night); box-shadow: 0 0 18px rgba(255,154,60,.45); }
+.btn-primary:hover { background: #ffd070; }
+.btn-ghost { background: transparent; color: var(--coin); }
+.btn-ghost:hover { background: var(--stone); }
+
+/* Cards */
+.grid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); padding: 0; margin: 0; list-style: none; }
+.card { background: var(--crypt); border: 2px solid var(--stone); border-radius: 4px; padding: 18px; }
+.card p { color: var(--mist); margin: 0; font-size: 16px; }
+.icon { min-height: 72px; display: flex; align-items: flex-end; margin-bottom: 12px; }
+.icon img, .icon .strip { image-rendering: pixelated; image-rendering: crisp-edges; }
+.icon img { height: 64px; width: auto; }
+.strip { background-repeat: no-repeat; }
+.step-no { font-family: var(--display); font-size: 40px; color: var(--spirit); line-height: 1; }
+.steps .card:nth-child(3) { border-color: var(--blood); }
+.feat .card:hover { border-color: var(--spirit); }
+
+/* Features: one scrolling row with an arrow on each side */
+.carousel { position: relative; }
+.carousel .feat {
+  list-style: none; margin: 0;
+  display: flex; gap: 18px; overflow-x: auto; scroll-snap-type: x mandatory;
+  scrollbar-width: thin; scrollbar-color: var(--stone) transparent;
+  padding: 4px 2px 14px; scroll-behavior: auto;
 }
-.tag b { display: block; font-weight: 600; }
-.tag .amt { color: var(--coin); }
-.tag .st { display: block; color: var(--mist); }
-.tag.is-dead b { text-decoration: line-through; color: var(--mist); }
-.tag.is-dead .st { color: var(--rot); }
-.tag.is-boss .st { color: var(--blood); }
-.tag.trial-tag { width: 15.5%; }
-.tag.is-buried .st { color: var(--rot); }
-.tag.is-converted .st, .tag.is-soon .st { color: var(--blood); }
-.tag.is-converted { background: rgba(18, 14, 28, 0.82); border-radius: 3px; padding: 2px 3px; }
-.float.bad { color: var(--blood); }
-.clock { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
-.today { font-family: var(--display); font-size: 18px; }
-.today small { display: block; font-family: var(--body); font-size: 13px; color: var(--mist); }
-.seg { display: inline-flex; border: 1px solid var(--stone); border-radius: 3px; overflow: hidden; }
-.seg button { border-radius: 0; background: transparent; color: var(--mist); }
-.seg button[aria-pressed="true"] { background: var(--stone); color: var(--bone); }
-.cards.trials { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.card .line.warn b { color: var(--blood); }
-.bar.time { height: 6px; background: var(--stone); border-radius: 1px; overflow: hidden; }
-.bar.time i { display: block; height: 100%; background: var(--coin); }
-.card.alarm { border-color: var(--spirit); }
-.tag.is-boss { background: rgba(18, 14, 28, 0.82); border-radius: 3px; padding: 2px 3px; }
-.bubble {
-  position: absolute; transform: translate(-50%, -100%);
-  background: var(--bone); color: var(--night);
-  font-family: var(--display); font-weight: 600; font-size: clamp(9px, 1.5vw, 13px);
-  padding: 2px 7px; border-radius: 2px; white-space: nowrap; pointer-events: none;
+.carousel .feat > li { flex: 0 0 min(280px, 78%); scroll-snap-align: start; }
+.carousel .feat:focus-visible { outline: 2px solid var(--coin); outline-offset: 4px; }
+.arrow {
+  position: absolute; top: 42%; transform: translateY(-50%); z-index: 2;
+  width: 44px; height: 44px; padding: 0; display: grid; place-items: center;
+  font-family: var(--display); font-size: 26px; line-height: 1; cursor: pointer;
+  color: var(--coin); background: var(--night); border: 2px solid var(--coin); border-radius: 4px;
+  box-shadow: 0 0 14px rgba(255,154,60,.35);
 }
-.bubble::after { content: ""; position: absolute; left: 50%; bottom: -5px; margin-left: -4px; border: 4px solid transparent; border-top-color: var(--bone); border-bottom: 0; }
-.float {
-  position: absolute; transform: translate(-50%, 0); pointer-events: none;
-  font-family: var(--display); font-weight: 700; color: var(--coin);
-  font-size: clamp(11px, 2vw, 18px); text-shadow: 0 2px 0 #000;
-  animation: rise 1.8s ease-out forwards;
-}
-@keyframes rise { from { opacity: 0; transform: translate(-50%, 6px); } 15% { opacity: 1; } to { opacity: 0; transform: translate(-50%, -40px); } }
+.arrow:hover:not(:disabled) { background: var(--stone); }
+.arrow:focus-visible { outline: 2px solid var(--bone); outline-offset: 3px; }
+.arrow:disabled { opacity: .3; cursor: default; box-shadow: none; }
+.arrow.prev { left: -70px; }
+.arrow.next { right: -70px; }
+@media (max-width: 640px) { .arrow.prev { left: -6px; } .arrow.next { right: -6px; } }
 
-.ledger { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
-.stat { background: var(--crypt); border: 1px solid var(--stone); border-radius: 4px; padding: 12px 14px; display: grid; gap: 2px; }
-.stat span { font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color: var(--mist); }
-.stat strong { font-family: var(--display); font-size: clamp(22px, 3.4vw, 30px); font-weight: 600; font-variant-numeric: tabular-nums; }
-.stat.eaten strong { color: var(--blood); }
-.stat.saved strong { color: var(--coin); }
+/* Privacy */
+.privacy { background: var(--crypt); }
+.privacy .pledge { font-family: var(--display); font-size: clamp(24px, 4vw, 34px); color: var(--bone); margin-bottom: 12px; }
+.privacy ul { margin: 0 0 16px; padding-left: 22px; }
+.privacy li { margin-bottom: 6px; }
+.note { border: 2px dashed var(--torch); border-radius: 4px; padding: 16px 18px; color: var(--bone); background: rgba(255,154,60,.07); }
+.note strong { color: var(--torch); font-family: var(--display); }
 
-.horde-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; }
-h2 { font-family: var(--display); font-size: 20px; font-weight: 600; margin: 0; }
-.cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
-.card { background: var(--crypt); border: 1px solid var(--stone); border-radius: 4px; padding: 14px; display: grid; gap: 8px; align-content: start; min-width: 0; }
-.card h3 { margin: 0; font-size: 16px; }
-.card .cat { font-size: 12px; color: var(--mist); letter-spacing: 1px; text-transform: uppercase; }
-.card .line { font-size: 13px; color: var(--mist); font-variant-numeric: tabular-nums; }
-.card .line b { color: var(--bone); }
-.rotbar { height: 6px; background: var(--stone); border-radius: 1px; overflow: hidden; }
-.rotbar i { display: block; height: 100%; background: var(--rot); }
-.card.dead { opacity: 0.6; }
+footer { border-top: 2px solid var(--stone); padding: 32px 0 48px; color: var(--mist); text-align: center; }
+footer a { margin: 0 8px; }
+footer .brand { display: block; margin-bottom: 6px; }
 
-button {
-  font-family: var(--display); font-weight: 600; font-size: 14px; letter-spacing: 0.5px;
-  background: var(--bone); color: var(--night); border: 0; border-radius: 3px;
-  padding: 8px 12px; cursor: pointer;
-}
-button:hover:not(:disabled) { background: var(--coin); }
-button:focus-visible, summary:focus-visible, input:focus-visible { outline: 2px solid var(--coin); outline-offset: 2px; }
-button:disabled { background: var(--stone); color: var(--mist); cursor: default; }
-button.ghost { background: transparent; color: var(--bone); border: 1px solid var(--stone); }
-button.ghost:hover:not(:disabled) { background: var(--stone); }
-.btnrow { display: flex; gap: 8px; flex-wrap: wrap; }
-
-.boss { border: 1px solid var(--blood); border-radius: 4px; padding: 16px; background: var(--crypt); display: grid; gap: 10px; }
-.boss h2 { color: var(--blood); }
-.boss ol { margin: 0; padding-left: 20px; display: grid; gap: 6px; max-width: 70ch; }
-.boss .script { background: var(--night); border: 1px dashed var(--stone); padding: 10px 12px; border-radius: 3px; font-size: 14px; }
-.boss .phone { font-family: var(--display); font-size: 18px; color: var(--coin); user-select: all; }
-
-details { background: var(--crypt); border: 1px solid var(--stone); border-radius: 4px; padding: 10px 14px; }
-summary { cursor: pointer; font-family: var(--display); font-weight: 600; }
-.tune { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px 20px; margin-top: 12px; }
-.tune label { display: grid; gap: 4px; font-size: 13px; color: var(--mist); }
-.tune label output { color: var(--bone); font-variant-numeric: tabular-nums; }
-.tune input[type=range] { width: 100%; accent-color: var(--coin); }
-.check { display: flex !important; align-items: center; gap: 8px; }
-.state { font-family: var(--display); font-size: 13px; color: var(--mist); margin-top: 12px; }
-.state b { color: var(--rot); }
-.note { font-size: 13px; color: var(--mist); max-width: 75ch; margin: 0; }
-
-.chip { display: inline-block; justify-self: start; font-family: var(--display); font-size: 13px; font-weight: 700; padding: 2px 8px; border-radius: 3px; border: 1px solid currentColor; font-variant-numeric: tabular-nums; }
-.chip.urgent { color: var(--blood); }
-.chip.soon { color: var(--coin); }
-.chip.ok { color: var(--rot); }
-.badge { display: inline-block; justify-self: start; font-family: var(--display); font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; background: var(--blood); color: var(--night); padding: 2px 8px; border-radius: 3px; }
-
-@media (max-width: 760px) {
-  .cards, .cards.trials { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-@media (max-width: 460px) {
-  .ledger { grid-template-columns: 1fr; }
-  .cards, .cards.trials { grid-template-columns: 1fr; }
-  .tag .st { display: none; }
-}
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header>
-    <div>
-      <h1>💀 Grim Renewal</h1>
-      <p class="tagline">Make sure the dead stay dead. Every forgotten subscription is a zombie. The Reaper goes knocking — and waits for the result before swinging.</p>
-    </div>
-    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-      <span class="proto">Prototype · sample data</span>
-      <button id="connectGmail" type="button" class="ghost" style="font-size:12px;padding:3px 10px;">Connect Gmail</button>
-      <span id="scanStatus" hidden style="font-family:var(--display);font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--mist);">Scanning receipts…</span>
-      <span id="bridgeChip" role="status" style="font-family:var(--display);font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--mist);">Browser: checking…</span>
-    </div>
-  </header>
+<a class="skip" href="#main">Skip to content</a>
 
-  <div class="clock">
-    <div class="today"><span id="today"></span><small id="todaySub"></small></div>
-    <div class="btnrow">
-      <div class="seg" role="group" aria-label="Scene">
-        <button id="viewHouse" type="button" aria-pressed="true">Hallway</button>
-        <button id="viewYard" type="button" aria-pressed="false">Graveyard</button>
+<header class="hero">
+  <div class="wrap">
+    <div class="top">
+      <a class="brand" href="./index.html">Grim Renewal</a>
+      <nav aria-label="Primary">
+        <a href="#how">How it works</a>
+        <a href="#features">Features</a>
+        <a href="#privacy">Privacy</a>
+        <!-- TODO(remove-demo): drop the Demo link before launch (see docs/week-plan.md) -->
+        <a href="./app.html?demo">Demo</a>
+      </nav>
+    </div>
+    <div class="scene">
+      <canvas id="scene" width="480" height="220" aria-hidden="true"></canvas>
+    </div>
+    <div class="hero-copy">
+      <h1>Grim <span>Renewal</span></h1>
+      <p class="tagline">Make sure the dead stay dead.</p>
+      <p class="sub">Your subscriptions keep coming back. We make sure they stay buried.</p>
+      <div class="cta">
+        <a class="btn btn-primary" href="./app.html">Enter the crypt</a>
+        <!-- TODO(remove-demo): drop the Try the demo button before launch -->
+        <a class="btn btn-ghost" href="./app.html?demo">Try the demo</a>
       </div>
-      <button id="advanceDay" type="button" class="ghost" hidden>Advance one day</button>
     </div>
   </div>
+</header>
 
-  <div class="stage" id="stageWrap">
-    <canvas id="stage" aria-label="Hallway of doors and a moonlit graveyard. Each door hides a subscription zombie; each grave holds a free trial. The grim reaper walks to a door or grave and cancels it."></canvas>
-    <div class="bubble" id="bubble" hidden></div>
+<main id="main">
+  <section id="how" aria-labelledby="how-h">
+    <div class="wrap">
+      <h2 id="how-h">How it works</h2>
+      <p class="lede">Three crew members share the work. You stay in charge.</p>
+      <ol class="grid steps" style="padding:0;list-style:none">
+        <li class="card">
+          <div class="step-no" aria-hidden="true">1</div>
+          <h3>Scout</h3>
+          <p>Finds your receipts and billing emails, and works out who is charging you.</p>
+        </li>
+        <li class="card">
+          <div class="step-no" aria-hidden="true">2</div>
+          <h3>Coroner</h3>
+          <p>Scores how forgotten each one is. The more forgotten, the more it rots.</p>
+        </li>
+        <li class="card">
+          <div class="step-no" aria-hidden="true">3</div>
+          <h3>Reaper</h3>
+          <p>Cancels while you watch. Every step waits for your approval.</p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <section id="features" aria-labelledby="feat-h">
+    <div class="wrap">
+      <h2 id="feat-h">What lurks inside</h2>
+      <p class="lede">Five ways the dead get put to rest.</p>
+      <div class="carousel" id="featCarousel" role="group" aria-roledescription="carousel" aria-label="Features">
+      <button type="button" class="arrow prev" data-prev aria-label="Previous features">&#8249;</button>
+      <ul class="feat" data-track tabindex="0" aria-label="Feature cards, scroll sideways">
+        <li class="card">
+          <div class="icon" aria-hidden="true"><div class="strip" style="width:48px;height:72px;background-image:url(./assets/sprites/reaper_idle.png);background-size:96px 72px;background-position:0 0"></div></div>
+          <h3>The Reaper</h3>
+          <p>Cancels a subscription for you. You approve each step first.</p>
+        </li>
+        <li class="card">
+          <div class="icon" aria-hidden="true"><img src="./assets/sprites/tombstone.png" alt=""></div>
+          <h3>The Graveyard</h3>
+          <p>Free trials count down in days. Bury them before they charge you.</p>
+        </li>
+        <li class="card">
+          <div class="icon" aria-hidden="true"><div class="strip" style="width:56px;height:56px;background-image:url(./assets/sprites/ghost.png);background-size:112px 56px;background-position:0 0"></div></div>
+          <h3>Revenants</h3>
+          <p>A charge that comes back after you cancelled. The zombie climbs out of its grave again. Preview in the demo.</p>
+        </li>
+        <li class="card">
+          <div class="icon" aria-hidden="true"><div class="strip" style="width:56px;height:56px;background-image:url(./assets/sprites/ghost.png);background-size:112px 56px;background-position:-56px 0;opacity:.55"></div></div>
+          <h3>Ghosts</h3>
+          <p>Every subscription gets a forgotten score, and the more forgotten it is, the more it rots. Finding dormant accounts that still hold your card is coming soon.</p>
+        </li>
+        <li class="card">
+          <div class="icon" aria-hidden="true"><img src="./assets/sprites/door_frame.png" alt=""></div>
+          <h3>The Boss Door</h3>
+          <p>Phone-only cancels. The Reaper flees, and you get a call script and a chargeback letter.</p>
+        </li>
+      </ul>
+      <button type="button" class="arrow next" data-next aria-label="Next features">&#8250;</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="privacy" class="privacy" aria-labelledby="priv-h">
+    <div class="wrap">
+      <h2 id="priv-h">Privacy</h2>
+      <p class="pledge">The Reaper only reads receipts.</p>
+      <ul>
+        <li>Read-only Gmail access. It can never send, edit or delete.</li>
+        <li>Raw email text is thrown away after the key facts are taken.</li>
+        <li>Nothing is sold or shared.</li>
+      </ul>
+      <p class="note"><strong>Hackathon prototype.</strong> Grim Renewal is an early build. Every cancel is approved by you, step by step.</p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span class="brand">Grim Renewal</span>
+    <p>Make sure the dead stay dead. Made for the Kiro hackathon.</p>
+    <p><a href="./app.html">Open the app</a> <!-- TODO(remove-demo): drop this footer demo link before launch --><a href="./app.html?demo">Try the demo</a></p>
   </div>
+</footer>
 
-  <section class="ledger" aria-label="Totals">
-    <div class="stat eaten"><span>The horde ate this year</span><strong id="eaten">$0</strong></div>
-    <div class="stat saved"><span>You'll save per year</span><strong id="saved">$0.00</strong></div>
-    <div class="stat"><span>Zombies still standing</span><strong id="left">0</strong></div>
-  </section>
-
-  <section class="boss" id="boss" hidden aria-live="polite">
-    <h2>⚠️ Boss Door — The Reaper Fled</h2>
-    <p class="note" id="bossLead"></p>
-    <ol>
-      <li>Call <span class="phone" id="bossPhone"></span>. Tuesday mornings have the shortest hold times.</li>
-      <li>Read this script:
-        <div class="script" id="bossScript"></div>
-      </li>
-      <li>If they refuse, a chargeback letter for your card issuer is already drafted.</li>
-    </ol>
-    <div class="btnrow">
-      <button id="copyScript" type="button">Copy call script</button>
-      <button id="bossDone" type="button" class="ghost">I cancelled it on the phone</button>
-    </div>
-  </section>
-
-  <section>
-    <div class="horde-head">
-      <h2>The Horde</h2>
-      <div class="btnrow">
-        <button id="reapAll" type="button">Send the Reaper to every door</button>
-        <button id="reset" type="button" class="ghost">Reset</button>
-        <button id="mute" type="button" class="ghost" aria-pressed="false">Sound on</button>
-      </div>
-    </div>
-  </section>
-  <section class="cards" id="cards"></section>
-  <section id="horde" hidden aria-label="More in the horde">
-    <h3 style="font-family:var(--display);margin:0 0 6px">More in the horde</h3>
-    <p class="note">These wait for a free door.</p>
-    <ul id="hordeList" class="note"></ul>
-  </section>
-
-  <section id="graveyard" aria-label="The Graveyard" hidden>
-    <div class="horde-head">
-      <div>
-        <h2>The graveyard</h2>
-        <p class="note">Free trials found in your inbox. The closer the first charge, the further they've climbed out.</p>
-      </div>
-      <button id="buryAll" type="button">Bury every trial</button>
-    </div>
-    <div class="cards trials" id="trialCards" style="margin-top:12px"></div>
-  </section>
-  <div class="btnrow"><button id="raiseRevenant" type="button" class="ghost" hidden>Debug: a cancelled charge comes back</button>
-    <button id="bridgeTest" type="button" class="ghost" hidden>Test the browser bridge</button></div>
-  <p id="graveyardLive" class="sr-only" aria-live="polite" aria-atomic="true"></p>
-
-  <details id="tuningPanel">
-    <summary>Tuning panel</summary>
-    <div class="tune">
-      <label for="tSpeed">Overall speed <output id="oSpeed">1.0×</output><input id="tSpeed" type="range" min="0.5" max="2.5" step="0.1" value="1"></label>
-      <label for="tKnocks">Knocks per door <output id="oKnocks">3</output><input id="tKnocks" type="range" min="1" max="5" step="1" value="3"></label>
-      <label for="tDissolve">Dissolve time <output id="oDissolve">900 ms</output><input id="tDissolve" type="range" min="300" max="2000" step="50" value="900"></label>
-      <label for="tLatency">Fake cancel delay <output id="oLatency">1200 ms</output><input id="tLatency" type="range" min="0" max="4000" step="100" value="1200"></label>
-      <label class="check" for="tFail"><input id="tFail" type="checkbox"> Make every cancellation fail (Boss Door)</label>
-    </div>
-    <div class="tune">
-      <label for="bridgeTok">Browser bridge key (from <code>npm run bridge</code>)<input id="bridgeTok" type="password" autocomplete="off" placeholder="paste, then press Enter"></label>
-    </div>
-    <div class="state">State machine: <b id="stateName">idle</b> <span id="stateSub"></span></div>
-  </details>
-
-  <p class="note">Prototype. Art is placeholder pixel work drawn in code. Cancellations are simulated; the animation waits for the result before choosing kill or retreat. Swap in real pixel-art sprites and connect the Gmail pipeline for the real app.</p>
-</div>
-
-<!-- aria-live region for screen readers -->
-<div id="ariaLive" class="sr-only" aria-live="polite" aria-atomic="true"></div>
-
-<script type="module">
-import { initHallway, setCancelHandler, onHordeChange, setView, advanceDay, tune } from '../animation/hallway.ts';
-import { SUBS, CONFIGS, TRIALS, TRIAL_CONFIGS, fakeCancel } from './demo-data.ts';
-import { showConsentBanner } from './consent-banner.ts';
-import { showApprovalDialog } from './approval-dialog.ts';
-import { runPipeline } from '../pipeline/pipeline.ts';
-import { showEmailEntry } from './email-entry.ts';
-import { createPotionLoader } from './potion-loader.ts';
-import { fetchProfileEmail } from '../pipeline/gmail-profile.ts';
-import { setAdapters } from '../agents/reaper.ts';
-import { redirectUriFor } from '../pipeline/oauth-redirect.ts';
-import { createSimulatedAdapter } from '../agents/adapters/simulated.ts';
-import { createCancelPlayerAdapter } from './cancel-player.ts';
-import { emit, subscribe } from '../agents/event-bus.ts';
-import { raiseRevenant } from './demo-data.ts';
-import { intakeBridgeToken, saveBridgeToken, connectBridge, getBrowserAdapter, STATUS_LABEL } from '../pipeline/bridge-client.ts';
-
-// ── Browser bridge: key from the printed link, chip, paste box, ?bridgetest ──
-// The key is a local per-run secret (not a Gmail token). Never logged; sent only to 127.0.0.1:8787.
-intakeBridgeToken(); // strips #bridge= from the URL; leaves other hash params (OAuth) alone
-const bridgeChip = document.getElementById('bridgeChip');
-async function refreshBridge() {
-  bridgeChip.textContent = STATUS_LABEL[await connectBridge()];
-}
-document.getElementById('bridgeTok').addEventListener('keydown', (e) => {
-  if (e.key !== 'Enter') return;
-  saveBridgeToken(e.target.value);
-  e.target.value = '';
-  refreshBridge();
-});
-{
-  const q = new URLSearchParams(location.search);
-  const tb = document.getElementById('bridgeTest');
-  if (q.has('debug') || q.has('bridgetest')) {
-    tb.hidden = false;
-    tb.addEventListener('click', () => {
-      const sub = {
-        id: 'bridgetest', merchant: 'Test Cancel Page', plan: null, monthlyAmount: 1, billingCycle: 'monthly',
-        chargeCount: 1, totalSpent: 1, lastChargeDate: new Date().toISOString(), renewalDate: null, trialEndDate: null,
-        accountEmail: 'test@example.com', cancelUrl: new URL('./test-cancel.html', location.href).href + (q.has('login') ? '?login=1' : ''),
-        phoneOnly: false, phone: null, memberId: null, forgottenScore: 0.5, state: 'idle', stateChangedAt: new Date().toISOString(),
-      };
-      showApprovalDialog(sub, async () => {
-        const adapter = getBrowserAdapter();
-        if (!adapter) { bridgeChip.textContent = 'Bridge test: FAIL (no key)'; return; }
-        bridgeChip.textContent = 'Bridge test: running…';
-        const r = await adapter(sub, async () => true);
-        const want = q.has('login') ? (!r.ok && r.reason === 'login_required') : r.ok;
-        bridgeChip.textContent = 'Bridge test: ' + (want ? 'PASS' : 'FAIL (' + (r.ok ? 'ok' : r.reason) + ')');
-      }, () => {});
-    });
-  }
-}
-
-// ── Graveyard: trials counting down; Revenant badges ────────────────────────
-const deadIds = new Set();
-const revenantIds = new Set();
-let allSubs = [];
-let graveyardAnnounced = false;
-
-function announceGraveyard(text) {
-  const live = document.getElementById('graveyardLive');
-  live.textContent = '';
-  requestAnimationFrame(() => { live.textContent = text; });
-}
-
-let lastTrials = [];
-const money = (n) => '$' + n.toFixed(2);
-const dayWord = (d) => d <= 0 ? 'today' : d === 1 ? 'tomorrow' : `in ${d} days`;
-
-function trialAction(t) {
-  switch (t.status) {
-    case 'idle': return { label: 'Bury it before it charges', on: true };
-    case 'converted': return { label: 'Send the reaper', on: true };
-    case 'buried': return { label: 'Buried', on: false };
-    case 'dead': return { label: 'Cancelled', on: false };
-    default: return { label: 'Reaper assigned', on: false };
-  }
-}
-
-// textContent only: merchant names come from email.
-function renderGraveyard(trials = lastTrials) {
-  lastTrials = trials;
-  const box = document.getElementById('trialCards');
-  document.getElementById('graveyard').hidden = trials.length === 0;
-  document.getElementById('buryAll').disabled = !trials.some(t => t.status === 'idle');
-  box.replaceChildren(...trials.map(({ sub, days, status }) => {
-    const c = document.createElement('article');
-    c.className = 'card' + (status === 'converted' ? ' alarm' : '') + (status === 'dead' || status === 'buried' ? ' dead' : '');
-    const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; };
-    const l1 = mk('div', 'line' + (days <= 2 ? ' warn' : ''));
-    const b1 = mk('b', '', `${new Date(sub.trialEndDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} (${dayWord(days)})`);
-    l1.append('Trial ends ', b1);
-    const l2 = mk('div', 'line', `Then ${money(sub.monthlyAmount)}/mo · ${money(sub.monthlyAmount * 12)}/yr`);
-    const bar = mk('div', 'bar time'); bar.title = 'Days until the first charge';
-    const fill = mk('i'); fill.style.width = Math.round(Math.min(1, days / 10) * 100) + '%';
-    bar.append(fill);
-    const act = trialAction({ status });
-    const btn = mk('button', '', act.label); btn.type = 'button'; btn.disabled = !act.on;
-    btn.addEventListener('click', () => askApproval([sub]));
-    c.append(mk('span', 'cat', 'Free trial'), mk('h3', '', sub.merchant), l1, l2, bar, btn);
-    return c;
-  }));
-  if (trials.length && !graveyardAnnounced) {
-    graveyardAnnounced = true;
-    const t = trials[0];
-    announceGraveyard(`Graveyard: ${trials.length} free trial${trials.length > 1 ? 's' : ''}. ${t.sub.merchant} charges ${dayWord(t.days)}.`);
-  }
-}
-
-function markRevenant(id) {
-  revenantIds.add(id);
-  deadIds.delete(id);
-  approvedIds.delete(id);
-  const el = cardEls.get(id);
-  if (!el) return;
-  el.classList.remove('dead');
-  const btn = el.querySelector('button');
-  btn.disabled = false;
-  btn.textContent = 'Send the Reaper';
-  if (!el.querySelector('.badge')) {
-    const b = document.createElement('span');
-    b.className = 'badge';
-    b.textContent = 'Revenant!';
-    el.querySelector('.cat').after(b);
-  }
-}
-
-// ── Cards: rendered from hallway events (discovered / scored / promoted) ────
-// textContent only: merchant names come from email.
-const cardEls = new Map();
-const approvedIds = new Set();
-let visibleSubs = [];
-
-function buildCard(s) {
-  const c = document.createElement('article');
-  c.className = 'card';
-  c.dataset.id = s.id;
-  const mk = (tag, cls) => { const e = document.createElement(tag); if (cls) e.className = cls; return e; };
-  const cat = mk('span', 'cat'); cat.textContent = s.billingCycle;
-  const h = mk('h3'); h.textContent = s.merchant;
-  const l1 = mk('div', 'line');
-  const m = mk('b'); m.textContent = '$' + s.monthlyAmount.toFixed(2);
-  l1.append(m, ` /mo · charged ${s.chargeCount}× this year`);
-  const l2 = mk('div', 'line');
-  const e = mk('b'); e.textContent = '$' + Math.round(s.monthlyAmount * s.chargeCount);
-  l2.append('Eaten so far: ', e);
-  const bar = mk('div', 'rotbar'); bar.title = 'How forgotten (0 = active, full = ghost)';
-  bar.append(mk('i'));
-  const btn = mk('button'); btn.type = 'button'; btn.textContent = 'Send the Reaper';
-  btn.addEventListener('click', () => askApproval([s]));
-  c.append(cat, h, l1, l2, bar, btn);
-  return c;
-}
-
-function renderHorde({ visible, overflow, trials }) {
-  visibleSubs = visible;
-  allSubs = [...visible, ...overflow];
-  renderGraveyard(trials);
-  const box = document.getElementById('cards');
-  const ids = new Set(visible.map(s => s.id));
-  for (const [id, el] of cardEls) {
-    if (!ids.has(id)) { el.remove(); cardEls.delete(id); }
-  }
-  visible.forEach(s => {
-    let el = cardEls.get(s.id);
-    if (!el) { el = buildCard(s); cardEls.set(s.id, el); box.appendChild(el); }
-    el.querySelector('.rotbar i').style.width = Math.round(s.forgottenScore * 100) + '%';
-    const btn = el.querySelector('button');
-    if (approvedIds.has(s.id)) { btn.disabled = true; }
-  });
-  const list = document.getElementById('hordeList');
-  list.replaceChildren(...overflow.map(s => {
-    const li = document.createElement('li');
-    li.textContent = `${s.merchant} · $${s.monthlyAmount.toFixed(2)}/mo`;
-    return li;
-  }));
-  document.getElementById('horde').hidden = overflow.length === 0;
-}
-
-// Approval gate: only "Approve cancellation" emits `approved`.
-function askApproval(queue) {
-  const sub = queue.shift();
-  if (!sub) return;
-  showApprovalDialog(
-    sub,
-    () => { emit({ kind: 'approved', subscriptionId: sub.id }); askApproval(queue); },
-    () => askApproval(queue),
-  );
-}
-
-document.getElementById('reapAll').addEventListener('click', () => {
-  askApproval(visibleSubs.filter(s => !approvedIds.has(s.id)));
-});
-
-document.getElementById('buryAll').addEventListener('click', () => {
-  askApproval(lastTrials.filter(t => t.status === 'idle').map(t => t.sub));
-});
-
-document.getElementById('viewHouse').addEventListener('click', () => setView('house'));
-document.getElementById('viewYard').addEventListener('click', () => setView('yard'));
-document.getElementById('advanceDay').addEventListener('click', advanceDay);
-
-document.getElementById('bossDone').addEventListener('click', () => {
-  const id = document.getElementById('boss').dataset.id;
-  if (id) emit({ kind: 'boss_resolved', subscriptionId: id });
-});
-
-subscribe((e) => {
-  if (!('subscriptionId' in e)) return;
-  const el = cardEls.get(e.subscriptionId);
-  if (e.kind === 'revenant') {
-    markRevenant(e.subscriptionId);
-    const s = allSubs.find(x => x.id === e.subscriptionId);
-    announceGraveyard(`Revenant! ${s ? s.merchant : 'A subscription'} was charged again after it was cancelled.`);
-  } else if (e.kind === 'approved') {
-    approvedIds.add(e.subscriptionId);
-    const b = el?.querySelector('button');
-    if (b) { b.disabled = true; b.textContent = 'Reaper sent'; }
-  } else if (e.kind === 'cancel_ok') {
-    deadIds.add(e.subscriptionId);
-    if (el) {
-      el.classList.add('dead');
-      el.querySelector('button').textContent = 'Cancelled';
-    }
-  }
-});
-
-onHordeChange(renderHorde);
-
-// ── OAuth implicit-flow token check ─────────────────────────────────────────
-// Runs before demo fallback so a returning OAuth redirect takes priority.
-
-function parseHashParams() {
-  // location.hash starts with '#'; strip it, then parse as search params.
-  return new URLSearchParams(location.hash.replace(/^#/, ''));
-}
-
-const hashParams = parseHashParams();
-const oauthToken = hashParams.get('access_token');
-
-if (oauthToken) {
-  // Clear the token from the URL bar immediately — do not leave it visible.
-  history.replaceState(null, '', location.pathname + location.search);
-
-  // Hide Connect Gmail button; show scanning status.
-  const connectBtn = document.getElementById('connectGmail');
-  const scanStatus = document.getElementById('scanStatus');
-  if (connectBtn) connectBtn.hidden = true;
-  if (scanStatus) scanStatus.hidden = false;
-
-  // Real mode: no cancel handler. Hallway adds doors from `discovered` events and
-  // reaper.ts emits cancel_* events once the user approves.
-  initHallway([], []);
-  document.getElementById('reset').hidden = true; // reaper.ts state cannot be reset
-  const proto = document.querySelector('.proto');
-  if (proto) proto.textContent = 'Live · your receipts';
-
-  // ?simulate: for seeded test accounts only. Cancels succeed on screen, nothing is really cancelled.
-  // The flag survives Google's redirect via sessionStorage (a plain on/off flag, never a token).
-  if (sessionStorage.getItem('grim_simulate') === '1' || new URLSearchParams(location.search).has('simulate')) {
-    // Merchants with a mock page play in the Cancellation Player; others use the instant simulated cancel.
-    const playerHost = document.createElement('section');
-    playerHost.id = 'cancelPlayer';
-    document.getElementById('stageWrap').before(playerHost);
-    setAdapters({ api: createCancelPlayerAdapter(playerHost, createSimulatedAdapter(), { getSpeed: () => tune.speed }) });
-    if (proto) proto.textContent = 'Live receipts · cancels play on mock sites';
-  }
-
-  // Resolve the account email: OAuth state if present, else the email-entry step
-  // (suggested from Gmail's profile call). Never logged or stored.
-  const accountEmailP = hashParams.get('state')
-    ? Promise.resolve(hashParams.get('state'))
-    : fetchProfileEmail(oauthToken).then((suggested) => showEmailEntry({ suggested }));
-
-  accountEmailP.then((accountEmail) => {
-    const loader = createPotionLoader(document.getElementById('stageWrap').parentElement.insertBefore(
-      document.createElement('div'), document.getElementById('stageWrap')));
-    // Say what happened. Never claim success on a failed or empty scan.
-    runPipeline(oauthToken, accountEmail, (p) => loader.update(p)).then(
-      (count) => {
-        loader.done(count);
-        if (!scanStatus) return;
-        scanStatus.textContent = count > 0
-          ? 'Scan complete · ' + count + ' found'
-          : 'No subscriptions found in the last 13 months.';
-      },
-      (err) => {
-        const msg = String(err && err.message || err);
-        const code = (/\b(401|403|429)\b/.exec(msg) || [])[1];
-        const hint = code === '401' ? 'Token expired. Connect again.'
-          : code === '403' ? 'Gmail API is off, or this account is not a test user.'
-          : code === '429' ? 'Gmail rate limit. Try again soon.'
-          : 'Scan failed.';
-        loader.fail(hint);
-        if (scanStatus) { scanStatus.hidden = false; scanStatus.textContent = hint; }
-        const connect = document.getElementById('connectGmail');
-        if (connect) connect.hidden = false;
-        announceGraveyard(hint);
-      },
-    );
-  }, () => {
-    // Email entry cancelled: no scan, let the user connect again.
-    if (scanStatus) scanStatus.hidden = true;
-    if (connectBtn) connectBtn.hidden = false;
-  });
-
-} else {
-  // ── Demo mode (default) — ?demo param or no token ────────────────────────
-  setCancelHandler(fakeCancel);
-  initHallway([...SUBS, ...TRIALS], [...CONFIGS, ...TRIAL_CONFIGS]);
-  document.getElementById('advanceDay').hidden = false; // demo only; the real app uses real dates
-
-  // Scripted revenant: cancel a zombie first, then press this to bring it back.
-  const qs = new URLSearchParams(location.search);
-  const rev = document.getElementById('raiseRevenant');
-  if (qs.has('debug') || qs.has('demo')) {
-    rev.hidden = false;
-    rev.addEventListener('click', () => {
-      if (!raiseRevenant()) announceGraveyard('Cancel a subscription first, then a charge can come back.');
-    });
-  }
-
-  // Wire the Connect Gmail button for first-time OAuth.
-  const connectBtn = document.getElementById('connectGmail');
-  if (connectBtn) {
-    connectBtn.addEventListener('click', () => {
-      showConsentBanner(
-        // onApprove: redirect to Google OAuth
-        () => {
-          // window.GRIM_CLIENT_ID must be set before the page loads.
-          // e.g. set window.GRIM_CLIENT_ID = "YOUR_CLIENT_ID" in a script tag above this one.
-          const clientId = window.GRIM_CLIENT_ID;
-          if (!clientId) {
-            alert('GRIM_CLIENT_ID is not set. Define window.GRIM_CLIENT_ID in a script tag before this module.');
-            return;
-          }
-          if (new URLSearchParams(location.search).has('simulate')) sessionStorage.setItem('grim_simulate', '1');
-          const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
-          url.searchParams.set('client_id', clientId);
-          url.searchParams.set('redirect_uri', redirectUriFor(location));
-          url.searchParams.set('response_type', 'token');
-          url.searchParams.set('scope', 'https://www.googleapis.com/auth/gmail.readonly');
-          location.href = url.toString();
-        },
-        // onDeny: do nothing
-        () => {},
-      );
-    });
-  }
-}
-
-refreshBridge();
-</script>
+<script type="module" src="./landing.ts"></script>
 </body>
 </html>
