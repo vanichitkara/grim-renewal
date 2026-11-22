@@ -5,7 +5,7 @@
 
 import { describe, it, expect } from 'vitest';
 import * as fc from 'fast-check';
-import { parseReceipt } from './parse-receipt.ts';
+import { isCancellationEmail, parseReceipt } from './parse-receipt.ts';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -244,5 +244,32 @@ describe('parseReceipt – several amounts', () => {
         }
       }),
     );
+  });
+});
+
+describe('isCancellationEmail', () => {
+  it('fires on real cancellation wording', () => {
+    for (const t of [
+      'Your subscription has been cancelled.',
+      'Your plan was canceled today.',
+      "We're sorry to see you go!",
+      'Your membership ends on March 3, 2026.',
+      'Cancellation confirmation for order 123',
+      "You've cancelled your subscription.",
+    ]) expect(isCancellationEmail(t), t).toBe(true);
+  });
+
+  it('does not fire on marketing or ordinary receipts', () => {
+    for (const t of [
+      'Cancel anytime. Watch what you love.',
+      'You can cancel your plan whenever you like.',
+      'Your receipt: charged $9.99 for your subscription.',
+      'Hello! How are you today?',
+    ]) expect(isCancellationEmail(t), t).toBe(false);
+  });
+
+  it('parseReceipt passes the sender domain through', () => {
+    const r = parseReceipt('Your receipt. You were charged $9.99/month.', 'netflix.com', '2026-02-03');
+    expect(r?.senderDomain).toBe('netflix.com');
   });
 });

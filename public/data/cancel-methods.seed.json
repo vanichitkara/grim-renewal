@@ -1,0 +1,11 @@
+{
+  "source": "starter list",
+  "note": "Demo merchants only. Not a claim about any real company.",
+  "merchants": {
+    "streamflix.com": { "method": "online", "source": "starter list" },
+    "cloudboxpro.com": { "method": "online", "source": "starter list" },
+    "mealcrate.com": { "method": "online", "source": "starter list" },
+    "designhub.com": { "method": "online", "source": "starter list" },
+    "ironcoregym.com": { "method": "phone", "source": "starter list" }
+  }
+}

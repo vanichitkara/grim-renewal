@@ -224,3 +224,8 @@ A "Cancel kit" per subscription with three tabs: Online, Email, Phone. Pick the 
 3. The merchant is in a small hand-kept list (start with about 20): use that, "from our list".
 4. Otherwise: Online tab first with "We could not tell how this one works. Try these in order": the account page, a web search link for "<merchant> cancel subscription", then the Email draft, then the Phone script if a number is known.
 After the user finishes, ask "What worked?" (online, email, phone, other) so the card learns. Sharing that across users needs a server and is a later step.
+
+- **Owner decision, 2026-11-22: privacy exception ACCEPTED for shared cancel tips.** The one thing that leaves the browser is
+  {company website name, method (online/email/phone/other), worked yes/no}, sent only when the user ticks an opt-in box that
+  starts OFF. The server keeps counts per company, method and month, accepts only companies on a reviewed list, and never logs
+  bodies or IPs. `.kiro/steering/privacy.md` itself is unchanged. Spec: `docs/specs/build-wave-2026-11-22.md` section A.

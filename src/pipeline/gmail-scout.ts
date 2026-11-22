@@ -11,7 +11,7 @@
  */
 
 import type { ReceiptFields, Subscription } from '../types.ts';
-import { parseReceipt } from './parse-receipt.ts';
+import { isCancellationEmail, normalizeMerchant, parseReceipt } from './parse-receipt.ts';
 
 // Gmail REST base URL — no SDK, plain fetch only.
 const GMAIL_API = 'https://gmail.googleapis.com/gmail/v1/users/me';
@@ -20,8 +20,11 @@ const GMAIL_API = 'https://gmail.googleapis.com/gmail/v1/users/me';
 // `in:inbox` covers every inbox tab (Primary, Promotions, Updates, Purchases) and
 // never drafts, sent, or trash. Do NOT use `labelIds` for this: Gmail ANDs them,
 // so INBOX + CATEGORY_PROMOTIONS only matches mail that is in both.
+// The cancellation words let "has been cancelled" mails through the same query-level
+// filter. Detection is best-effort: many cancellation mails use other words and stay
+// invisible, and archived mail (not in the inbox) is never seen.
 const RECEIPT_QUERY =
-  'in:inbox (receipt OR renewal OR billing OR "your subscription" OR "trial ending") newer_than:13m';
+  'in:inbox (receipt OR renewal OR billing OR "your subscription" OR "trial ending" OR cancelled OR canceled OR "membership ends" OR "sorry to see you go") newer_than:13m';
 
 // ── Gmail API helpers ─────────────────────────────────────────────────────────
 
@@ -199,6 +202,19 @@ interface Accumulator {
   memberId: string | null;
   chargeCount: number;
   totalSpent: number;
+  senderDomain: string;
+  currency: string;
+  /** ISO days, deduplicated, sorted, at most MAX_CHARGE_DATES. */
+  chargeDates: string[];
+}
+
+const MAX_CHARGE_DATES = 36;
+
+/** Insert a receipt date, keep the list unique, sorted, and capped to the newest. */
+function addChargeDate(dates: string[], date: string): void {
+  if (!dates.includes(date)) dates.push(date);
+  dates.sort();
+  if (dates.length > MAX_CHARGE_DATES) dates.splice(0, dates.length - MAX_CHARGE_DATES);
 }
 
 /** Normalize amount to a monthly equivalent for comparison / display. */
@@ -207,12 +223,21 @@ function toMonthly(amount: number, cycle: Subscription['billingCycle']): number 
   return amount;
 }
 
+/** What one message gave us: receipt fields and/or a cancellation date for a merchant. */
+interface ParsedMessage {
+  fields: ReceiptFields | null;
+  /** Set only when the text read like a cancellation notice and the date is known. */
+  cancel: { merchant: string; date: string } | null;
+}
+
 /**
  * Parse one message: snippet first, full body as fallback. Returns structured
- * fields only. PRIVACY: raw text is local to this function and dropped on return;
- * errors are swallowed so no message content or ID can reach a log or message.
+ * fields and a cancellation date only. PRIVACY: raw text is local to this function
+ * and dropped on return; errors are swallowed so no message content or ID can reach
+ * a log or message. isCancellationEmail runs on the snippet first, and on the body
+ * only on the existing fallback path (snippet was neither receipt nor cancellation).
  */
-async function parseOne(token: string, id: string): Promise<ReceiptFields | null> {
+async function parseOne(token: string, id: string): Promise<ParsedMessage | null> {
   try {
     const msg = await fetchMessageMeta(token, id);
     const domain = senderDomain(header(msg, 'From'));
@@ -220,11 +245,19 @@ async function parseOne(token: string, id: string): Promise<ReceiptFields | null
     const sent = new Date(header(msg, 'Date'));
     const headerDate = isNaN(sent.getTime()) ? undefined : sent.toISOString().slice(0, 10);
 
-    const fromSnippet = parseReceipt(msg.snippet, domain, headerDate);
-    if (fromSnippet) return fromSnippet;
+    const build = (text: string): ParsedMessage => ({
+      fields: parseReceipt(text, domain, headerDate),
+      cancel:
+        headerDate && isCancellationEmail(text)
+          ? { merchant: normalizeMerchant(domain), date: headerDate }
+          : null,
+    });
+
+    const fromSnippet = build(msg.snippet);
+    if (fromSnippet.fields || fromSnippet.cancel) return fromSnippet;
 
     const full = await fetchMessageFull(token, id);
-    return parseReceipt(extractText(full.payload), domain, headerDate);
+    return build(extractText(full.payload));
   } catch {
     return null; // inaccessible or unparseable: skip
   }
@@ -287,7 +320,7 @@ export async function scanInbox(
   const accumMap = new Map<string, Accumulator>();
 
   // Preview first; full body only when the preview did not parse (limited concurrency).
-  const parsed: Array<ReceiptFields | null> = new Array(ids.length).fill(null);
+  const parsed: Array<ParsedMessage | null> = new Array(ids.length).fill(null);
   let next = 0;
   let read = 0;
   let found = 0;
@@ -297,13 +330,22 @@ export async function scanInbox(
       const i = next++;
       parsed[i] = await parseOne(token, ids[i]!);
       read++;
-      if (parsed[i]) found++;
+      if (parsed[i]?.fields) found++;
       onProgress?.({ read, total: ids.length, found }); // counts only, no message data
     }
   };
   await Promise.all(Array.from({ length: Math.min(CONCURRENCY, ids.length) }, worker));
 
-  for (const fields of parsed) {
+  // merchant -> latest cancellation-email date (a date only, never text)
+  const cancelDates = new Map<string, string>();
+  for (const p of parsed) {
+    if (p?.cancel && p.cancel.date > (cancelDates.get(p.cancel.merchant) ?? '')) {
+      cancelDates.set(p.cancel.merchant, p.cancel.date);
+    }
+  }
+
+  for (const msg of parsed) {
+    const fields = msg?.fields;
     if (!fields) continue;
 
     // PRIVACY: use the caller-supplied accountEmail, never an address from a header.
@@ -328,10 +370,14 @@ export async function scanInbox(
         memberId: fields.memberId,
         chargeCount: 1,
         totalSpent: fields.amount,
+        senderDomain: fields.senderDomain,
+        currency: fields.currency,
+        chargeDates: [fields.date],
       });
     } else {
       // Deduplication: keep the most-recent non-zero amount.
       existing.chargeCount += 1;
+      addChargeDate(existing.chargeDates, fields.date);
       existing.totalSpent = parseFloat((existing.totalSpent + fields.amount).toFixed(2));
 
       if (fields.date > existing.latestDate && fields.amount > 0) {
@@ -344,6 +390,8 @@ export async function scanInbox(
         existing.phoneOnly = fields.phoneOnly || existing.phoneOnly;
         existing.phone = fields.phone ?? existing.phone;
         existing.memberId = fields.memberId ?? existing.memberId;
+        existing.senderDomain = fields.senderDomain;
+        existing.currency = fields.currency;
       }
     }
   }
@@ -374,6 +422,10 @@ export async function scanInbox(
       forgottenScore: 0,       // Coroner fills this in
       state: 'idle',
       stateChangedAt: now,
+      senderDomain: acc.senderDomain,
+      chargeDates: acc.chargeDates,
+      currency: acc.currency,
+      ...(cancelDates.has(acc.merchant) ? { cancellationEmailDate: cancelDates.get(acc.merchant)! } : {}),
     });
   }
 

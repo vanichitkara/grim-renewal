@@ -46,6 +46,14 @@ export interface Subscription {
   state: CancellationState;
   /** ISO 8601 timestamp of last state change */
   stateChangedAt: string;
+  /** Sender's domain, e.g. "netflix.com". Optional so older literals still compile. */
+  senderDomain?: string;
+  /** Receipt dates (ISO 8601 day), oldest first, deduplicated, at most 36. */
+  chargeDates?: string[];
+  /** Date (ISO 8601 day) of the latest cancellation email seen. Date only, never text. */
+  cancellationEmailDate?: string;
+  /** ISO 4217 code of the amounts above, e.g. "USD". Missing means USD. */
+  currency?: string;
 }
 
 /** Fields the receipt parser extracts from a single email. */
@@ -63,6 +71,8 @@ export interface ReceiptFields {
   phoneOnly: boolean;
   phone: string | null;
   memberId: string | null;
+  /** Domain of the sender, passed through from the caller. */
+  senderDomain: string;
 }
 
 /** Events emitted by agents onto the shared event bus. */

@@ -21,7 +21,7 @@ gmail-test-*
 .idea/
 
 # local data (shared-tips store)
-data/
+/data/
 
 # logs and caches
 *.log
