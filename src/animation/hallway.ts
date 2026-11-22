@@ -338,7 +338,7 @@ function trialStatusText(ts: TrialSlot): string {
     case 'converted': return 'Now charging ' + money(ts.sub.monthlyAmount) + '/mo';
     case 'cancelling': return 'Cancelling\u2026';
     case 'reaping':   return 'Reaping';
-    case 'dead':      return 'Cancelled \u00b7 +' + money0(ts.sub.monthlyAmount * 12) + '/yr';
+    case 'dead':      return 'Cancel sent. Waiting to verify';
     default:
       return days <= 0 ? 'Charges today' : days === 1 ? 'Charges tomorrow' : `Charges in ${days} days`;
   }
@@ -375,8 +375,27 @@ function mk(tag: string, text: string, cls?: string): HTMLElement {
   return el;
 }
 
+/**
+ * Status words the app gives the scene for a slot at rest (the same words as the card and the List).
+ * The scene keeps its own words only while the Reaper is acting on that slot.
+ */
+const restingLabel = new Map<string, string>();
+
+/**
+ * Show the app's status on a slot's tag, so the scene, the card and the List never disagree.
+ * Pass null to fall back to the scene's own words. Text only: it is set with textContent.
+ */
+export function setSlotLabel(id: string, label: string | null): void {
+  if (label === null || label.trim() === '') restingLabel.delete(id);
+  else restingLabel.set(id, label.slice(0, 80));
+  renderTag(id);
+}
+
 function statusText(slot: SubSlot): string {
   const { sub, slot: { status } } = slot;
+  const rest = restingLabel.get(sub.id);
+  // At rest, or after a result, the app's words win. Action words ("Knock, knock") stay the scene's.
+  if (rest && (status === 'idle' || status === 'dead' || status === 'boss')) return rest;
   switch (status) {
     case 'queued':     return 'Reaper on the way';
     case 'walking':    return 'Reaper approaching';
@@ -384,7 +403,8 @@ function statusText(slot: SubSlot): string {
     case 'opening':    return 'Something stirs';
     case 'cancelling': return 'Cancelling…';
     case 'reaping':    return 'Reaping';
-    case 'dead':       return 'Cancelled · +' + money0(sub.monthlyAmount * 12) + '/yr';
+    // No money here: savings count only when the evidence rules say so (the header shows them).
+    case 'dead':       return 'Cancel sent. Waiting to verify';
     case 'boss':       return 'Phone-only. Reaper fled.';
     default:           return 'Subscription active';
   }

@@ -21,9 +21,25 @@ export interface DashboardOpts {
   extraClaims?: Record<string, string>;
   /** Called once when a subscription first reaches Verified. */
   onVerified?: (id: string) => void;
+  /** Tells the scene the status word for a slot, so the scene, the cards and the List agree. */
+  onStatus?: (id: string, label: string | null) => void;
   /** Demo mode remembers nothing between visits. */
   remember?: boolean;
   now?: () => Date;
+}
+
+
+/** The short text for a scene tag. Null means: let the scene show its own words. */
+export function sceneLabel(st: { word: string; detail?: string | undefined }): string | null {
+  switch (st.word) {
+    case 'Found': return null;
+    case 'Verified': return 'Verified cancelled';
+    case 'Likely cancelled': return st.detail && /full cycle/i.test(st.detail) ? 'No charge for a full cycle' : 'Likely cancelled';
+    case 'Waiting to verify': return 'Waiting to verify';
+    case 'Came back': return 'Came back: charged again';
+    case 'Cancel started': return null; // the Reaper is acting: the scene's own words are more precise
+    default: return st.word;
+  }
 }
 
 const VIEW_KEY = 'grim_view';
@@ -75,6 +91,7 @@ export function createDashboard(opts: DashboardOpts = {}) {
       if (!st || !line) return;
       line.textContent = '';
       line.append(mk('b', '', st.word));
+      opts.onStatus?.(card.dataset['id']!, sceneLabel(st));
       // The detail often starts with the same word ("Verified: no charge seen..."). Say it once.
       const detail = st.detail && !st.detail.toLowerCase().startsWith(st.word.toLowerCase()) ? st.detail : st.detail?.replace(/^[A-Za-z ]+:\s*/, '');
       if (detail) line.append(` · ${detail}`);

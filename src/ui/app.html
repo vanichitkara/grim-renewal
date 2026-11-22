@@ -357,7 +357,7 @@ body.locked .proto, body.locked #bridgeChip, body.locked #scanStatus, body.locke
 <div id="ariaLive" class="sr-only" aria-live="polite" aria-atomic="true"></div>
 
 <script type="module">
-import { initHallway, setCancelHandler, onHordeChange, setView, advanceDay, tune, celebrateVerified } from '../animation/hallway.ts';
+import { initHallway, setCancelHandler, onHordeChange, setView, advanceDay, tune, celebrateVerified, setSlotLabel } from '../animation/hallway.ts';
 import { SUBS, CONFIGS, TRIALS, TRIAL_CONFIGS, MORE_SUBS, MORE_CONFIGS, DEMO_CLAIMS, fakeCancel } from './demo-data.ts';
 import { createDashboard } from './dashboard.ts';
 import { showConsentBanner } from './consent-banner.ts';
@@ -420,6 +420,7 @@ const dashboard = createDashboard({
   remember: !isDemoPage,
   extraClaims: isDemoPage ? DEMO_CLAIMS : {},
   onVerified: (id) => celebrateVerified(id),
+  onStatus: (id, label) => setSlotLabel(id, label),
 });
 
 // ── Graveyard: trials counting down; Revenant badges ────────────────────────
