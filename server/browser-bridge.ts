@@ -1,15 +1,29 @@
 /**
  * Local bridge: page -> fetch -> this server -> Playwright MCP (stdio) -> headed browser.
- * Binds 127.0.0.1 only. Per-run random token. Never logs page text, URLs or typed text.
+ * Binds 127.0.0.1 only. Key kept in .env (git-ignored), made on first run. Never logs page text, URLs or typed text.
  */
 import { createServer } from 'node:http';
 import { randomBytes } from 'node:crypto';
+import { existsSync, readFileSync, writeFileSync, chmodSync } from 'node:fs';
+import { parseEnv, upsertEnv, isValidBridgeKey } from '../src/server/env-file.ts';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { decide, matchOrigin } from '../src/server/bridge-core.ts';
 
 const PORT = 8787;
-const token = randomBytes(24).toString('hex');
+// The key lives in .env (git-ignored) so it stays the same between runs and the dev page connects by itself.
+// An environment variable wins over the file. First run with no key: make one and save it.
+const ENV_PATH = new URL('../.env', import.meta.url).pathname;
+const fileText = existsSync(ENV_PATH) ? readFileSync(ENV_PATH, 'utf8') : '';
+const fromFile = parseEnv(fileText)['GRIM_BRIDGE_TOKEN'];
+let token: string | undefined = process.env['GRIM_BRIDGE_TOKEN'];
+if (!isValidBridgeKey(token)) token = isValidBridgeKey(fromFile) ? fromFile : undefined;
+if (!token) {
+  token = randomBytes(24).toString('hex');
+  writeFileSync(ENV_PATH, upsertEnv(fileText, 'GRIM_BRIDGE_TOKEN', token));
+  try { chmodSync(ENV_PATH, 0o600); } catch { /* best effort */ }
+  console.log('Made a new bridge key and saved it in .env (git-ignored). Restart the dev server so the page picks it up.');
+}
 
 // Headed (no --headless) so the user watches. One session, reused.
 const transport = new StdioClientTransport({
@@ -71,7 +85,7 @@ const server = createServer((req, res) => {
 server.listen(PORT, '127.0.0.1', () => {
   console.log(`Grim bridge on http://127.0.0.1:${PORT}`);
   console.log('Open this link (the page saves the token, then hides it):');
-  console.log(`  http://localhost:5173/#bridge=${token}`);
+  console.log(`  http://localhost:5173/app.html#bridge=${token}`);
 });
 
 process.on('SIGINT', () => {

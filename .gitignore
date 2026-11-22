@@ -6,6 +6,7 @@ dist/
 # secrets and local config: never commit these
 .env
 .env.*
+!.env.example
 *.local
 *.pem
 *.key
