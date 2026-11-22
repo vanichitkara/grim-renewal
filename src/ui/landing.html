@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Grim Renewal — Make sure the dead stay dead.</title>
+<meta name="description" content="Grim Renewal finds your forgotten subscriptions and sends the Reaper to cancel them while you watch and approve.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600;700&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+:root {
+  --night:  #120e1c;
+  --crypt:  #1c162b;
+  --stone:  #2a2240;
+  --bone:   #ece6d6;
+  --mist:   #a59cbc;
+  --coin:   #f2b84b;
+  --rot:    #8fc25a;
+  --blood:  #e0574f;
+  --spirit: #c99bff;
+  --torch:  #ff9a3c;
+  --display: "Pixelify Sans", "Courier New", monospace;
+  --body:    "Atkinson Hyperlegible", system-ui, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--night); color: var(--bone); font-family: var(--body); font-size: 17px; line-height: 1.6; }
+a { color: var(--spirit); }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--coin); outline-offset: 3px; }
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+.skip { position: absolute; left: 8px; top: -60px; background: var(--coin); color: var(--night); padding: 8px 14px; border-radius: 3px; z-index: 10; font-weight: 700; }
+.skip:focus { top: 8px; }
+.wrap { max-width: 1040px; margin: 0 auto; padding: 0 20px; }
+h1, h2, h3 { font-family: var(--display); margin: 0; text-wrap: balance; }
+h2 { font-size: clamp(26px, 4vw, 36px); color: var(--bone); margin-bottom: 8px; }
+h3 { font-size: 20px; color: var(--coin); margin-bottom: 4px; }
+p { margin: 0 0 12px; }
+section { padding: 56px 0; border-top: 2px solid var(--stone); }
+.lede { color: var(--mist); max-width: 62ch; margin-bottom: 28px; }
+
+/* Header */
+.top { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 0; }
+.brand { font-family: var(--display); font-weight: 700; font-size: 20px; color: var(--bone); text-decoration: none; }
+.top nav { display: flex; gap: 18px; flex-wrap: wrap; }
+.top nav a { color: var(--mist); text-decoration: none; font-weight: 700; }
+.top nav a:hover { color: var(--bone); text-decoration: underline; }
+
+/* Hero */
+.hero { position: relative; overflow: hidden; border-top: 0; padding: 0 0 40px;
+  background: radial-gradient(ellipse at 50% 100%, rgba(255,154,60,.14), transparent 60%), linear-gradient(var(--night), var(--crypt)); }
+.scene { position: relative; width: 100%; aspect-ratio: 480 / 220; max-height: 460px; margin: 8px 0 24px; border: 2px solid var(--stone); border-radius: 4px; overflow: hidden; background: var(--crypt); }
+#scene { display: block; width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; }
+.hero-copy { text-align: center; }
+.hero h1 { font-weight: 700; font-size: clamp(44px, 9vw, 88px); line-height: 1; letter-spacing: 1px; color: var(--bone);
+  text-shadow: 0 0 18px rgba(255,154,60,.55), 0 4px 0 var(--stone); }
+.hero h1 span { color: var(--blood); }
+.tagline { font-family: var(--display); font-size: clamp(20px, 3vw, 28px); color: var(--coin); margin: 14px 0 6px; }
+.sub { color: var(--mist); max-width: 52ch; margin: 0 auto 26px; }
+.cta { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; }
+.btn { display: inline-block; font-family: var(--display); font-weight: 700; font-size: 18px; text-decoration: none; padding: 12px 24px; border-radius: 4px; border: 2px solid var(--coin); }
+.btn-primary { background: var(--coin); color: var(--night); box-shadow: 0 0 18px rgba(255,154,60,.45); }
+.btn-primary:hover { background: #ffd070; }
+.btn-ghost { background: transparent; color: var(--coin); }
+.btn-ghost:hover { background: var(--stone); }
+
+/* Cards */
+.grid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); padding: 0; margin: 0; list-style: none; }
+.card { background: var(--crypt); border: 2px solid var(--stone); border-radius: 4px; padding: 18px; }
+.card p { color: var(--mist); margin: 0; font-size: 16px; }
+.icon { min-height: 72px; display: flex; align-items: flex-end; margin-bottom: 12px; }
+.icon img, .icon .strip { image-rendering: pixelated; image-rendering: crisp-edges; }
+.icon img { height: 64px; width: auto; }
+.strip { background-repeat: no-repeat; }
+.step-no { font-family: var(--display); font-size: 40px; color: var(--spirit); line-height: 1; }
+.steps .card:nth-child(3) { border-color: var(--blood); }
+.feat .card:hover { border-color: var(--spirit); }
+
+/* Features: one scrolling row with an arrow on each side */
+.carousel { position: relative; }
+.carousel .feat {
+  list-style: none; margin: 0;
+  display: flex; gap: 18px; overflow-x: auto; scroll-snap-type: x mandatory;
+  scrollbar-width: thin; scrollbar-color: var(--stone) transparent;
+  padding: 4px 2px 14px; scroll-behavior: auto;
+}
+.carousel .feat > li { flex: 0 0 min(280px, 78%); scroll-snap-align: start; }
+.carousel .feat:focus-visible { outline: 2px solid var(--coin); outline-offset: 4px; }
+.arrow {
+  position: absolute; top: 42%; transform: translateY(-50%); z-index: 2;
+  width: 44px; height: 44px; padding: 0; display: grid; place-items: center;
+  font-family: var(--display); font-size: 26px; line-height: 1; cursor: pointer;
+  color: var(--coin); background: var(--night); border: 2px solid var(--coin); border-radius: 4px;
+  box-shadow: 0 0 14px rgba(255,154,60,.35);
+}
+.arrow:hover:not(:disabled) { background: var(--stone); }
+.arrow:focus-visible { outline: 2px solid var(--bone); outline-offset: 3px; }
+.arrow:disabled { opacity: .3; cursor: default; box-shadow: none; }
+.arrow.prev { left: -70px; }
+.arrow.next { right: -70px; }
+@media (max-width: 640px) { .arrow.prev { left: -6px; } .arrow.next { right: -6px; } }
+
+/* Privacy */
+.privacy { background: var(--crypt); }
+.privacy .pledge { font-family: var(--display); font-size: clamp(24px, 4vw, 34px); color: var(--bone); margin-bottom: 12px; }
+.privacy ul { margin: 0 0 16px; padding-left: 22px; }
+.privacy li { margin-bottom: 6px; }
+.note { border: 2px dashed var(--torch); border-radius: 4px; padding: 16px 18px; color: var(--bone); background: rgba(255,154,60,.07); }
+.note strong { color: var(--torch); font-family: var(--display); }
+
+footer { border-top: 2px solid var(--stone); padding: 32px 0 48px; color: var(--mist); text-align: center; }
+footer a { margin: 0 8px; }
+footer .brand { display: block; margin-bottom: 6px; }
+
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="top">
+      <a class="brand" href="/landing.html">Grim Renewal</a>
+      <nav aria-label="Primary">
+        <a href="#how">How it works</a>
+        <a href="#features">Features</a>
+        <a href="#privacy">Privacy</a>
+        <a href="/?demo">Demo</a>
+      </nav>
+    </div>
+    <div class="scene">
+      <canvas id="scene" width="480" height="220" aria-hidden="true"></canvas>
+    </div>
+    <div class="hero-copy">
+      <h1>Grim <span>Renewal</span></h1>
+      <p class="tagline">Make sure the dead stay dead.</p>
+      <p class="sub">Your subscriptions keep coming back. We make sure they stay buried.</p>
+      <div class="cta">
+        <a class="btn btn-primary" href="/">Enter the crypt</a>
+        <a class="btn btn-ghost" href="/?demo">Try the demo</a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+  <section id="how" aria-labelledby="how-h">
+    <div class="wrap">
+      <h2 id="how-h">How it works</h2>
+      <p class="lede">Three crew members share the work. You stay in charge.</p>
+      <ol class="grid steps" style="padding:0;list-style:none">
+        <li class="card">
+          <div class="step-no" aria-hidden="true">1</div>
+          <h3>Scout</h3>
+          <p>Finds your receipts and billing emails, and works out who is charging you.</p>
+        </li>
+        <li class="card">
+          <div class="step-no" aria-hidden="true">2</div>
+          <h3>Coroner</h3>
+          <p>Scores how forgotten each one is. The more forgotten, the more it rots.</p>
+        </li>
+        <li class="card">
+          <div class="step-no" aria-hidden="true">3</div>
+          <h3>Reaper</h3>
+          <p>Cancels while you watch. Every step waits for your approval.</p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <section id="features" aria-labelledby="feat-h">
+    <div class="wrap">
+      <h2 id="feat-h">What lurks inside</h2>
+      <p class="lede">Five ways the dead get put to rest.</p>
+      <div class="carousel" id="featCarousel" role="group" aria-roledescription="carousel" aria-label="Features">
+      <button type="button" class="arrow prev" data-prev aria-label="Previous features">&#8249;</button>
+      <ul class="feat" data-track tabindex="0" aria-label="Feature cards, scroll sideways">
+        <li class="card">
+          <div class="icon" aria-hidden="true"><div class="strip" style="width:48px;height:72px;background-image:url(/assets/sprites/reaper_idle.png);background-size:96px 72px;background-position:0 0"></div></div>
+          <h3>The Reaper</h3>
+          <p>Cancels a subscription for you. You approve each step first.</p>
+        </li>
+        <li class="card">
+          <div class="icon" aria-hidden="true"><img src="/assets/sprites/tombstone.png" alt=""></div>
+          <h3>The Graveyard</h3>
+          <p>Free trials count down in days. Bury them before they charge you.</p>
+        </li>
+        <li class="card">
+          <div class="icon" aria-hidden="true"><div class="strip" style="width:56px;height:56px;background-image:url(/assets/sprites/ghost.png);background-size:112px 56px;background-position:0 0"></div></div>
+          <h3>Revenants</h3>
+          <p>A charge that comes back after you cancelled. The zombie climbs out of its grave again. Preview in the demo.</p>
+        </li>
+        <li class="card">
+          <div class="icon" aria-hidden="true"><div class="strip" style="width:56px;height:56px;background-image:url(/assets/sprites/ghost.png);background-size:112px 56px;background-position:-56px 0;opacity:.55"></div></div>
+          <h3>Ghosts</h3>
+          <p>Every subscription gets a forgotten score, and the more forgotten it is, the more it rots. Finding dormant accounts that still hold your card is coming soon.</p>
+        </li>
+        <li class="card">
+          <div class="icon" aria-hidden="true"><img src="/assets/sprites/door_frame.png" alt=""></div>
+          <h3>The Boss Door</h3>
+          <p>Phone-only cancels. The Reaper flees, and you get a call script and a chargeback letter.</p>
+        </li>
+      </ul>
+      <button type="button" class="arrow next" data-next aria-label="Next features">&#8250;</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="privacy" class="privacy" aria-labelledby="priv-h">
+    <div class="wrap">
+      <h2 id="priv-h">Privacy</h2>
+      <p class="pledge">The Reaper only reads receipts.</p>
+      <ul>
+        <li>Read-only Gmail access. It can never send, edit or delete.</li>
+        <li>Raw email text is thrown away after the key facts are taken.</li>
+        <li>Nothing is sold or shared.</li>
+      </ul>
+      <p class="note"><strong>Hackathon prototype.</strong> Grim Renewal is an early build. Every cancel is approved by you, step by step.</p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span class="brand">Grim Renewal</span>
+    <p>Make sure the dead stay dead. Made for the Kiro hackathon.</p>
+    <p><a href="/">Open the app</a> <a href="/?demo">Try the demo</a></p>
+  </div>
+</footer>
+
+<script type="module" src="./landing.ts"></script>
+</body>
+</html>

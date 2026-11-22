@@ -1,0 +1,25 @@
+# dependencies and build output
+node_modules/
+dist/
+*.tsbuildinfo
+
+# secrets and local config: never commit these
+.env
+.env.*
+*.local
+*.pem
+*.key
+
+# tokens and test credentials (the app keeps tokens in memory only)
+*token*.txt
+gmail-test-*
+
+# editor and OS
+.DS_Store
+.vscode/
+.idea/
+
+# logs and caches
+*.log
+.vite/
+coverage/

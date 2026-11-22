@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Test cancel page</title></head>
+<body>
+<h1>Test Merchant</h1>
+<p id="msg"></p>
+<div id="app">
+  <button id="a" type="button">Cancel subscription</button>
+  <button id="b" type="button" hidden>Yes, cancel it</button>
+</div>
+<script>
+const $ = (id) => document.getElementById(id);
+if (new URLSearchParams(location.search).has('login')) {
+  $('app').innerHTML = '<label>Email <input type="email"></label> <label>Password <input type="password"></label>';
+} else {
+  $('a').onclick = () => { $('a').hidden = true; $('b').hidden = false; };
+  $('b').onclick = () => { $('app').hidden = true; $('msg').textContent = 'Your subscription has been cancelled.'; };
+}
+</script>
+</body></html>
