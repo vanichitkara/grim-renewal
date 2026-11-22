@@ -151,3 +151,17 @@ Final frame: the hallway, four tombstones, $995.64/yr saved.
   flag accounts that hold a card or data but show no activity as Ghosts, with a Ghosts view or
   badge. The landing page Ghosts card was reworded to match what is built and says this is
   "coming soon"; when Ghosts ships, restore the dormant-account wording in `src/ui/landing.html`.
+
+---
+
+## In progress / queued (set 2026-11-22)
+
+- [~] **Cancellation Player** (worker running): watch the Reaper cancel on dummy merchant sites in `public/mock/`, approve each step.
+- [ ] **Boss Door call console** (next, after the Player lands; both edit `index.html`):
+  - A simulated AI phone agent: dial, menu, hold, human agent, the AI says it is an AI calling for the user, declines offers, gets a confirmation number. Clearly labelled "Simulation: no real call is placed".
+  - Behind a `VoiceCallProvider` interface so a real phone provider can plug in later.
+  - Explicit user consent before the call, listen-in, Take over and Hang up buttons.
+  - A "seamless kit" that is real today: a tap-to-call link, the copy-script button, a written-cancellation email draft, a dispute letter, and a calendar reminder (.ics) to check the card 35 days later for a returning charge.
+  - Remove the invented "Tuesday mornings have the shortest wait" line from the Boss Door panel unless a source is found.
+  - `docs/phone-agent.md`: how a real AI call would work, and the legal limits (FCC 24-17 treats AI voices as "artificial voice" under the TCPA; California AI-voice disclosure and all-party recording consent; identity checks hand the call to the user).
+- [ ] Then: Revenant dispute flow, then Ghosts detection (above).

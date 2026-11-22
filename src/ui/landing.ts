@@ -22,10 +22,10 @@ async function main(): Promise<void> {
   if (!ctx) return;
   ctx.imageSmoothingEnabled = false;
   const [walk, idle, ghost, door] = await Promise.all([
-    load('/assets/sprites/reaper_walk.png'),
-    load('/assets/sprites/reaper_idle.png'),
-    load('/assets/sprites/ghost.png'),
-    load('/assets/sprites/door_frame.png'),
+    load('./assets/sprites/reaper_walk.png'),
+    load('./assets/sprites/reaper_idle.png'),
+    load('./assets/sprites/ghost.png'),
+    load('./assets/sprites/door_frame.png'),
   ]);
 
   const stars = Array.from({ length: 40 }, (_, i) => ({ x: (i * 97) % W, y: (i * 53) % 110, p: i }));

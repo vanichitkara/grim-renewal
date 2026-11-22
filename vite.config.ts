@@ -3,6 +3,8 @@ import { resolve } from 'path';
 
 export default defineConfig({
   root: 'src/ui',
+  // Relative paths so the built site works from any folder, e.g. GitHub Pages at /grim-renewal/.
+  base: './',
   publicDir: resolve(__dirname, 'public'),
   resolve: {
     alias: { '@': resolve(__dirname, 'src') },

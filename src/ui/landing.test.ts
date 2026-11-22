@@ -6,8 +6,12 @@ const html = readFileSync(resolve(__dirname, 'landing.html'), 'utf8');
 
 describe('landing page', () => {
   it('links to the app and the demo', () => {
-    expect(html).toContain('href="/"');
-    expect(html).toContain('href="/?demo"');
+    expect(html).toContain('href="./index.html"');
+    expect(html).toContain('href="./index.html?demo"');
+  });
+  it('uses no root-absolute paths, so it works under a sub-path', () => {
+    expect(html).not.toMatch(/(href|src)="\/(?!\/)/);
+    expect(html).not.toMatch(/url\(\/(?!\/)/);
   });
   it('has the privacy line', () => {
     expect(html).toContain('The Reaper only reads receipts.');

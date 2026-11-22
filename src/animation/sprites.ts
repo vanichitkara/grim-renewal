@@ -72,7 +72,8 @@ let set = new Map<string, Sprite>();
 let loading: Promise<SpriteSet> | null = null;
 
 /** Loads all sheets once. A sheet that fails to load is skipped (callers fall back). */
-export function loadSprites(base = '/assets/sprites/'): Promise<SpriteSet> {
+// Relative on purpose: the site may live under a sub-path (GitHub Pages: /grim-renewal/).
+export function loadSprites(base = './assets/sprites/'): Promise<SpriteSet> {
   loading ??= (async () => {
     const next = new Map<string, Sprite>();
     await Promise.all(MANIFEST.map(async (d) => {
