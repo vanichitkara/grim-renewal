@@ -46,6 +46,9 @@ Local shared tips: put `GRIM_COMMUNITY_URL=http://127.0.0.1:8788` in `.env` (see
 The address is baked in at build time, is public, and is not a secret. On GitHub, set it as a repository **variable**
 named `GRIM_COMMUNITY_URL` (an https address) before the Pages build.
 
+Deploy the tips server to Google Cloud Run (your terminal, needs `gcloud auth login`):
+`bash scripts/deploy-tips-gcp.sh <project-id> us-central1`. See `docs/community-api.md`.
+
 Specs and decisions: `docs/specs/build-wave-2026-11-22.md`, `docs/specs/review-build-wave.md`, `docs/week-plan.md`.
 
 ## Concept

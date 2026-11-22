@@ -67,37 +67,32 @@ To point the dev site at it: build with `GRIM_COMMUNITY_URL=http://127.0.0.1:878
 The code is in `src/community/` (pure `handle()`, ranking, validation, stores, browser client) and `server/community-api.ts`
 (sockets only; it re-exports `handle`). Pure code lives under `src/` so the tests and `tsc` cover it.
 
-## Deploy to Cloud Run with Firestore (owner step: needs your Google Cloud account)
+## Deploy to Cloud Run with Firestore (run in your own terminal)
 
-Cloud Run's disk is temporary, so the JSON-file store is for local runs only. Production needs a database behind the same
-`TipStore` interface. Sketch (not built, no dependency added):
+Cloud Run's disk is wiped on restart, so the deployed server keeps its counts in **Firestore** (`STORE=firestore`).
+The store is `src/community/firestore-store.ts`: one document per (company, method, month) holding two counters,
+updated with an atomic increment. No user, address or time is stored. Local runs keep using the JSON file.
 
-```ts
-import { Firestore, FieldValue } from '@google-cloud/firestore';
-import type { TipStore } from '../src/community/types.ts';
-
-export function createFirestoreStore(db = new Firestore()): TipStore {
-  const col = db.collection('tips'); // doc id: `${merchantKey}|${method}|${month}`
-  return {
-    async add(r) {
-      await col.doc(`${r.merchantKey}|${r.method}|${r.month}`).set(
-        { merchantKey: r.merchantKey, method: r.method, month: r.month,
-          [r.worked ? 'worked' : 'failed']: FieldValue.increment(1) },
-        { merge: true },
-      );
-    },
-    async get(merchantKey) {
-      const snap = await col.where('merchantKey', '==', merchantKey).get();
-      return snap.docs.map((d) => ({ worked: 0, failed: 0, ...d.data() }) as never);
-    },
-  };
-}
+```bash
+gcloud auth login                         # once
+bash scripts/deploy-tips-gcp.sh <project-id> us-central1
 ```
 
-Steps: add `@google-cloud/firestore`, wire the store in `startServer`, containerise (`node:20`, run `npx tsx server/community-api.ts`
-with `HOST=0.0.0.0`, `PORT` from Cloud Run, `TRUST_PROXY=1`), `gcloud run deploy`, set `GRIM_CORS_ORIGINS` to the Pages origin.
-Then set the GitHub Actions variable `GRIM_COMMUNITY_URL` to the https service address (public, not a secret) and rebuild the site.
-Check: `curl https://<service>/health`, then load the live site and confirm the page can call `/health` from the Pages origin.
+The script checks your sign-in and that billing is on, turns on Cloud Run, Cloud Build, Artifact Registry and Firestore,
+creates a Native-mode Firestore database if there is none, creates a service account that may only read and write
+Firestore (`roles/datastore.user`), builds `./Dockerfile` (Node 22) and deploys `grim-tips` with small limits
+(0 to 2 instances, 256 MiB, 15 s timeout). Then it checks `/health`, checks that only the site's origin is allowed,
+and checks that another website gets a 403. It prints the https address and the two commands that put it on the live site:
+
+```bash
+gh variable set GRIM_COMMUNITY_URL --repo vanichitkara/grim-renewal --body "<the https address>"
+gh workflow run pages.yml --repo vanichitkara/grim-renewal --ref main
+```
+
+`.gcloudignore` limits the upload to the server files: `.env`, `node_modules`, the site and git history never leave your machine.
+Allowed sites come from `GRIM_CORS_ORIGINS` (default `https://vanichitkara.github.io`; never `*`).
+Undo: `gcloud run services delete grim-tips --region <region> --project <project-id>`. Firestore data stays until you delete the database.
+Prices change; check Cloud Run and Firestore pricing for your account before relying on the free tier.
 
 ## Known gaps
 

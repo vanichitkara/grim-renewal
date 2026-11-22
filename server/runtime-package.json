@@ -1,0 +1,11 @@
+{
+  "name": "grim-renewal-tips-server",
+  "private": true,
+  "type": "module",
+  "description": "Runtime dependencies for the Cloud Run container only (see server/Dockerfile).",
+  "engines": { "node": ">=22" },
+  "dependencies": {
+    "@google-cloud/firestore": "9.4.1",
+    "tsx": "4.23.15"
+  }
+}
