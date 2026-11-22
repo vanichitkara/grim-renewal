@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StreamFlix (mock)</title>
+<style>
+body{margin:0;font:16px/1.5 system-ui,sans-serif;background:#141414;color:#f3f3f3}
+.mock{background:#f2b84b;color:#120e1c;font-weight:700;text-align:center;padding:6px 10px;font-size:13px}
+header{padding:14px 20px;font-weight:800;color:#e50914;font-size:22px;border-bottom:1px solid #333}
+main{max-width:520px;margin:0 auto;padding:20px}
+h1,h2{margin:.2em 0 .5em}
+button{font:inherit;padding:10px 16px;margin:6px 6px 6px 0;border:0;border-radius:4px;background:#e50914;color:#fff;cursor:pointer}
+button.alt{background:#333}
+button:disabled{opacity:.4;cursor:default}
+label{display:block;margin:6px 0}
+.box{border:1px solid #333;border-radius:6px;padding:12px;margin:10px 0}
+</style></head><body>
+<div class="mock" role="note">MOCK PAGE. Nothing here is real.</div>
+<header>StreamFlix</header>
+<main>
+<section id="account"><h1>Account</h1>
+  <div class="box"><p>Plan: Premium, $22.99 per month</p></div>
+  <button type="button" data-go="manage">Manage plan</button>
+  <button type="button" class="alt">Sign out</button></section>
+
+<section id="manage" hidden><h1>Your plan</h1>
+  <div class="box"><p>Premium, 4 screens, Ultra HD</p></div>
+  <button type="button" data-go="offer">Cancel plan</button>
+  <button type="button" class="alt" data-go="account">Keep my plan</button></section>
+
+<section id="offer" hidden><h1>Wait! Stay for 50% off</h1>
+  <p>Keep Premium at half price for 3 months.</p>
+  <button type="button" data-go="account">Stay for 50% off</button>
+  <button type="button" class="alt" data-go="survey">No thanks, continue</button></section>
+
+<section id="survey" hidden><h1>Why are you leaving?</h1>
+  <form id="f">
+    <label><input type="radio" name="why" value="price"> Too expensive</label>
+    <label><input type="radio" name="why" value="use"> I do not watch enough</label>
+    <label><input type="radio" name="why" value="other"> Something else</label>
+    <button type="submit" id="sub" disabled>Submit</button>
+  </form></section>
+
+<section id="confirm" hidden><h1>One last step</h1>
+  <p>Your access ends at the end of this billing period.</p>
+  <button type="button" data-go="done">Confirm cancellation</button>
+  <button type="button" class="alt" data-go="account">Go back</button></section>
+
+<section id="done" hidden><h1>All done</h1>
+  <p role="status">Your subscription has been cancelled.</p></section>
+</main>
+<script>
+function show(id){document.querySelectorAll('section').forEach(function(s){s.hidden=s.id!==id})}
+document.addEventListener('click',function(e){var b=e.target.closest('[data-go]');if(b)show(b.dataset.go)});
+document.getElementById('f').addEventListener('change',function(){document.getElementById('sub').disabled=false});
+document.getElementById('f').addEventListener('submit',function(e){e.preventDefault();show('confirm')});
+</script></body></html>

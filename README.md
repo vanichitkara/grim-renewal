@@ -5,6 +5,19 @@
 Grim Renewal finds your forgotten subscriptions, scores how forgotten they are,
 and sends the Reaper to cancel them — while you watch and approve every step.
 
+## Live site
+
+- Landing page: https://vanichitkara.github.io/grim-renewal/landing.html
+- Try the demo (fake subscriptions, no sign-in): https://vanichitkara.github.io/grim-renewal/index.html?demo
+- Every push to `main` runs the tests, builds, and publishes through `.github/workflows/pages.yml`.
+- Gmail sign-in runs in Google "testing" mode: only listed test users can connect.
+
+## Cancellation Player (mock sites)
+
+With `?simulate`, the Reaper cancels on dummy merchant sites under `public/mock/` while you watch.
+You approve each click. Nothing real is cancelled. A real site will use the same driver through
+the local Playwright bridge (see "Browser cancels").
+
 ## Concept
 
 Every subscription is a zombie. Its size is the money it has eaten this year.

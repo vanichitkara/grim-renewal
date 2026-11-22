@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DesignHub (mock)</title>
+<style>
+body{margin:0;font:16px/1.5 system-ui,sans-serif;background:#faf7ff;color:#241a3a}
+.mock{background:#f2b84b;color:#120e1c;font-weight:700;text-align:center;padding:6px 10px;font-size:13px}
+header{padding:14px 20px;font-weight:800;color:#7a3cf2;font-size:22px;border-bottom:1px solid #e4dcf5}
+main{max-width:520px;margin:0 auto;padding:20px}
+h1{margin:.2em 0 .5em}
+button{font:inherit;padding:10px 16px;margin:6px 6px 6px 0;border:0;border-radius:4px;background:#7a3cf2;color:#fff;cursor:pointer}
+button.alt{background:#e4dcf5;color:#241a3a}
+.box{border:1px solid #e4dcf5;border-radius:6px;padding:12px;margin:10px 0;background:#fff}
+</style></head><body>
+<div class="mock" role="note">MOCK PAGE. Nothing here is real.</div>
+<header>DesignHub</header>
+<main>
+<h1>Your plan</h1>
+<div class="box"><p>Annual, $119.99 per year</p></div>
+<div id="ask">
+  <button type="button" id="c1">Cancel plan</button>
+</div>
+<div id="sure" hidden>
+  <p>End your plan now?</p>
+  <button type="button" id="c2">Yes, cancel</button>
+  <button type="button" class="alt" id="back">Keep plan</button>
+</div>
+<p id="msg" role="status" hidden>Your plan has been cancelled.</p>
+</main>
+<script>
+var $=function(i){return document.getElementById(i)};
+$('c1').onclick=function(){$('ask').hidden=true;$('sure').hidden=false};
+$('back').onclick=function(){$('sure').hidden=true;$('ask').hidden=false};
+$('c2').onclick=function(){$('sure').hidden=true;$('msg').hidden=false};
+</script></body></html>

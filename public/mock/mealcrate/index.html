@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MealCrate (mock)</title>
+<style>
+body{margin:0;font:16px/1.5 system-ui,sans-serif;background:#fffaf0;color:#3a2a12}
+.mock{background:#f2b84b;color:#120e1c;font-weight:700;text-align:center;padding:6px 10px;font-size:13px}
+header{padding:14px 20px;font-weight:800;color:#e0702f;font-size:22px;border-bottom:1px solid #ead9bd}
+main{max-width:520px;margin:0 auto;padding:20px}
+h1{margin:.2em 0 .5em}
+button{font:inherit;padding:10px 16px;margin:6px 6px 6px 0;border:0;border-radius:4px;background:#e0702f;color:#fff;cursor:pointer}
+button.big{display:block;width:100%;font-size:20px;padding:18px}
+button:disabled{opacity:.4;cursor:default}
+a{font-size:12px;color:#8a7a60}
+label{display:block;margin:6px 0}
+.box{border:1px solid #ead9bd;border-radius:6px;padding:12px;margin:10px 0;background:#fff}
+</style></head><body>
+<div class="mock" role="note">MOCK PAGE. Nothing here is real.</div>
+<header>MealCrate</header>
+<main>
+<section id="account"><h1>Account</h1>
+  <div class="box"><p>4 meals a week, $59.99 per week</p></div>
+  <button type="button" data-go="trap">Manage deliveries</button></section>
+
+<section id="trap" hidden><h1>Pause instead?</h1>
+  <p>Busy month? Skip deliveries and keep your recipes.</p>
+  <button type="button" class="big" data-go="account">Pause my deliveries for 3 months</button>
+  <p><a href="#" data-go="survey">No, cancel</a></p></section>
+
+<section id="survey" hidden><h1>Tell us why</h1>
+  <form id="f">
+    <label><input type="radio" name="why" value="price"> Too pricey</label>
+    <label><input type="radio" name="why" value="time"> No time to cook</label>
+    <label><input type="radio" name="why" value="other"> Something else</label>
+    <button type="submit" id="sub" disabled>Submit</button>
+  </form></section>
+
+<section id="confirm" hidden><h1>Almost done</h1>
+  <p>This ends your weekly crates.</p>
+  <button type="button" data-go="done">Confirm cancellation</button></section>
+
+<section id="done" hidden><h1>All done</h1>
+  <p role="status">Your subscription has been cancelled.</p></section>
+</main>
+<script>
+function show(id){document.querySelectorAll('section').forEach(function(s){s.hidden=s.id!==id})}
+document.addEventListener('click',function(e){var b=e.target.closest('[data-go]');if(b){e.preventDefault();show(b.dataset.go)}});
+document.getElementById('f').addEventListener('change',function(){document.getElementById('sub').disabled=false});
+document.getElementById('f').addEventListener('submit',function(e){e.preventDefault();show('confirm')});
+</script></body></html>

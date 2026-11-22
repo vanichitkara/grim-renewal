@@ -268,7 +268,7 @@ summary { cursor: pointer; font-family: var(--display); font-weight: 600; }
 <div id="ariaLive" class="sr-only" aria-live="polite" aria-atomic="true"></div>
 
 <script type="module">
-import { initHallway, setCancelHandler, onHordeChange, setView, advanceDay } from '../animation/hallway.ts';
+import { initHallway, setCancelHandler, onHordeChange, setView, advanceDay, tune } from '../animation/hallway.ts';
 import { SUBS, CONFIGS, TRIALS, TRIAL_CONFIGS, fakeCancel } from './demo-data.ts';
 import { showConsentBanner } from './consent-banner.ts';
 import { showApprovalDialog } from './approval-dialog.ts';
@@ -277,7 +277,9 @@ import { showEmailEntry } from './email-entry.ts';
 import { createPotionLoader } from './potion-loader.ts';
 import { fetchProfileEmail } from '../pipeline/gmail-profile.ts';
 import { setAdapters } from '../agents/reaper.ts';
+import { redirectUriFor } from '../pipeline/oauth-redirect.ts';
 import { createSimulatedAdapter } from '../agents/adapters/simulated.ts';
+import { createCancelPlayerAdapter } from './cancel-player.ts';
 import { emit, subscribe } from '../agents/event-bus.ts';
 import { raiseRevenant } from './demo-data.ts';
 import { intakeBridgeToken, saveBridgeToken, connectBridge, getBrowserAdapter, STATUS_LABEL } from '../pipeline/bridge-client.ts';
@@ -304,7 +306,7 @@ document.getElementById('bridgeTok').addEventListener('keydown', (e) => {
       const sub = {
         id: 'bridgetest', merchant: 'Test Cancel Page', plan: null, monthlyAmount: 1, billingCycle: 'monthly',
         chargeCount: 1, totalSpent: 1, lastChargeDate: new Date().toISOString(), renewalDate: null, trialEndDate: null,
-        accountEmail: 'test@example.com', cancelUrl: location.origin + '/test-cancel.html' + (q.has('login') ? '?login=1' : ''),
+        accountEmail: 'test@example.com', cancelUrl: new URL('./test-cancel.html', location.href).href + (q.has('login') ? '?login=1' : ''),
         phoneOnly: false, phone: null, memberId: null, forgottenScore: 0.5, state: 'idle', stateChangedAt: new Date().toISOString(),
       };
       showApprovalDialog(sub, async () => {
@@ -526,8 +528,12 @@ if (oauthToken) {
   // ?simulate: for seeded test accounts only. Cancels succeed on screen, nothing is really cancelled.
   // The flag survives Google's redirect via sessionStorage (a plain on/off flag, never a token).
   if (sessionStorage.getItem('grim_simulate') === '1' || new URLSearchParams(location.search).has('simulate')) {
-    setAdapters({ api: createSimulatedAdapter() });
-    if (proto) proto.textContent = 'Live receipts · simulated cancels';
+    // Merchants with a mock page play in the Cancellation Player; others use the instant simulated cancel.
+    const playerHost = document.createElement('section');
+    playerHost.id = 'cancelPlayer';
+    document.getElementById('stageWrap').before(playerHost);
+    setAdapters({ api: createCancelPlayerAdapter(playerHost, createSimulatedAdapter(), { getSpeed: () => tune.speed }) });
+    if (proto) proto.textContent = 'Live receipts · cancels play on mock sites';
   }
 
   // Resolve the account email: OAuth state if present, else the email-entry step
@@ -601,7 +607,7 @@ if (oauthToken) {
           if (new URLSearchParams(location.search).has('simulate')) sessionStorage.setItem('grim_simulate', '1');
           const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
           url.searchParams.set('client_id', clientId);
-          url.searchParams.set('redirect_uri', location.origin);
+          url.searchParams.set('redirect_uri', redirectUriFor(location));
           url.searchParams.set('response_type', 'token');
           url.searchParams.set('scope', 'https://www.googleapis.com/auth/gmail.readonly');
           location.href = url.toString();

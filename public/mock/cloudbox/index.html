@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CloudBox (mock)</title>
+<style>
+body{margin:0;font:16px/1.5 system-ui,sans-serif;background:#f4f7fb;color:#12233a}
+.mock{background:#f2b84b;color:#120e1c;font-weight:700;text-align:center;padding:6px 10px;font-size:13px}
+header{padding:14px 20px;font-weight:800;color:#1c6ef2;font-size:22px;background:#fff;border-bottom:1px solid #dde4ee}
+main{max-width:520px;margin:0 auto;padding:20px}
+h1{margin:.2em 0 .5em}
+button{font:inherit;padding:10px 16px;margin:6px 6px 6px 0;border:0;border-radius:4px;background:#1c6ef2;color:#fff;cursor:pointer}
+button.tab{background:#dde4ee;color:#12233a}
+button.danger{background:#c9302c}
+button:disabled{opacity:.4;cursor:default}
+.box{background:#fff;border:1px solid #dde4ee;border-radius:6px;padding:12px;margin:10px 0}
+</style></head><body>
+<div class="mock" role="note">MOCK PAGE. Nothing here is real.</div>
+<header>CloudBox</header>
+<main>
+<section id="settings"><h1>Settings</h1>
+  <div><button type="button" class="tab">Profile</button>
+  <button type="button" class="tab" data-go="billing">Billing</button>
+  <button type="button" class="tab">Notifications</button></div>
+  <div class="box"><p>Signed in as a demo user.</p></div></section>
+
+<section id="billing" hidden><h1>Billing</h1>
+  <div class="box"><p>Pro plan, 2 TB, $9.99 per month</p></div>
+  <button type="button" class="danger" data-go="sure">Cancel subscription</button></section>
+
+<section id="sure" hidden><h1>Before you go</h1>
+  <div class="box"><p>Files over the free 5 GB limit will be deleted after 30 days.</p>
+  <label><input type="checkbox" id="ack"> I understand I lose my files</label></div>
+  <button type="button" class="danger" id="go" data-go="done" disabled>Cancel subscription</button></section>
+
+<section id="done" hidden><h1>All done</h1>
+  <p role="status">Your CloudBox subscription has been cancelled.</p></section>
+</main>
+<script>
+function show(id){document.querySelectorAll('section').forEach(function(s){s.hidden=s.id!==id})}
+document.addEventListener('click',function(e){var b=e.target.closest('[data-go]');if(b&&!b.disabled)show(b.dataset.go)});
+document.getElementById('ack').addEventListener('change',function(e){document.getElementById('go').disabled=!e.target.checked});
+</script></body></html>
