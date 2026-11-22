@@ -19,6 +19,35 @@ With `?simulate`, the Reaper cancels on dummy merchant sites under `public/mock/
 You approve each click. Nothing real is cancelled. A real site will use the same driver through
 the local Playwright bridge (see "Browser cancels").
 
+## What it does
+
+- **Finds** forgotten subscriptions from receipt emails (read-only Gmail, nothing but the key facts is kept).
+- **Shows the answer first:** "You pay $X a month for N things you may have forgotten", with two honest savings numbers.
+  *Avoided so far* counts only evidence (a cancellation email, or you saying you cancelled, plus charges that did not come).
+  *Next 12 months* is an estimate and says so. A receipt gap alone is "No charge seen", never "Verified".
+- **Scene or List:** a haunted mansion front (doors and windows, 8 per page) or a plain table that scales to any count.
+- **Cancel kit:** Online / Email / Phone tabs. It opens on the method that worked for most people, and says why.
+- **Shared tips ("what worked"):** after you cancel, you may choose to share, anonymously, which method worked for a company.
+  Only the company's website name, the method and yes/no are sent, only when you tick a box that starts OFF.
+  The app downloads one public list of settled answers and looks companies up on your own machine, so the server never learns
+  which companies you have. See `docs/community-api.md`. **Without a deployed https server this works only on your machine;
+  the live site shows the starter list.**
+- **Trial guard:** a calendar reminder file two days before a free trial ends.
+
+## Run the pieces
+
+```bash
+npm run dev          # the site (landing page first; the app is /app.html, locked until sign-in; /app.html?demo for the demo)
+npm run community    # optional: the shared-tips server on http://127.0.0.1:8788
+npm run bridge       # optional: the local browser bridge (see "Browser cancels")
+```
+
+Local shared tips: put `GRIM_COMMUNITY_URL=http://127.0.0.1:8788` in `.env` (see `.env.example`) and restart `npm run dev`.
+The address is baked in at build time, is public, and is not a secret. On GitHub, set it as a repository **variable**
+named `GRIM_COMMUNITY_URL` (an https address) before the Pages build.
+
+Specs and decisions: `docs/specs/build-wave-2026-11-22.md`, `docs/specs/review-build-wave.md`, `docs/week-plan.md`.
+
 ## Concept
 
 Every subscription is a zombie. Its size is the money it has eaten this year.
