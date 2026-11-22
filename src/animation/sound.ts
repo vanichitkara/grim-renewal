@@ -88,4 +88,6 @@ export const sfx = {
   roar:     () => { tone(70, 0.9, 'sawtooth', 0.16, 45); noise(0.6, 0.2, 300); },
   thud:     () => { tone(90, 0.18, 'triangle', 0.3, 40); noise(0.08, 0.2, 250); },
   yelp:     () => tone(420, 0.35, 'square', 0.08, 1400),
+  crash:    () => { noise(0.35, 0.3, 4200); tone(1800, 0.12, 'square', 0.05, 600); },
+  whoosh:   () => tone(260, 0.16, 'sine', 0.05, 900),
 };

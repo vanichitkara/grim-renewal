@@ -65,3 +65,13 @@ Use only the named easings from `src/animation/ease.ts`:
 - Always present in the prototype. Hidden in production behind a `?debug` query param.
 - Must include: speed, knocks, dissolve time, cancel delay, force-fail toggle.
 - Must show current state machine step as plain text (for debugging and the write-up).
+
+## Mansion Scene
+- The scene is a haunted mansion front: ground-floor doors and upper-floor windows. Layout and paging live in the pure `src/animation/layout.ts`; draw code never computes slot positions itself.
+- 8 slots per page (4 columns, door below, window above). Never draw more than `PER_PAGE` slots. More subscriptions go on further pages.
+- The reaper glides (`ease.out`) for short hops and blinks (smoke out, smoke in) for far targets. The approach starts on the `approved` event only.
+- The smash (glass shards, boards) and the kill or flee play only after `cancel_ok` / `cancel_fail`. A failed cancel never breaks the glass.
+- Long queues use `layout.pace()`: fewer knocks and faster tweens, capped at 2.5x. `tune.speed` and reduced motion still apply (no smoke, no glass, no shake under reduced motion).
+- Pages turn only between sequences, after all tweens have settled. The page follows the reaper (auto-turn) and is announced in the `aria-live` region; the canvas `aria-label` names the page and the current action.
+- A slot with a cancelled subscription shows boards (window) or a tombstone (door). Every glide, blink and smash is a tween in the `live` set and can be cancelled.
+- New sprites come from `scripts/make-sprites.ts` only, and every one has a rectangle fallback.

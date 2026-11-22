@@ -21,6 +21,7 @@ const PAL: Record<string, string> = {
   E: '#f5e663', M: '#2a1a1a', W: '#e9e9e9', P: '#3d3550', B: '#241f30',
   Y: '#f2b84b', H: '#fff3c4', y: '#d9b25a',               // coin gold, shine, shade
   G: '#6f6a80', L: '#8a85a0', X: '#3f3b4f',               // tombstone
+  a: '#211a33', A: '#1b1529',                              // mansion brick, mortar
   n: '#3b2a20', N: '#4d382a', v: '#07050c', q: '#6e4a2f', Q: '#5e3f28', r: '#4e3420', // door
 };
 // 'T' = shirt marker. zombie.ts recolours it per subscription.
@@ -186,6 +187,85 @@ const ghost = [
   ['.bbbbb.', 'bbbbbbb', 'bbobobb', 'bbbbbbb', 'bbbbbbb', 'dbdbdbd', '.b.b.b.'],
 ].map(fromRows);
 
+
+// ---------- mansion: window frame (pane transparent), glass, broken glass, boards, wall tile, smoke ----------
+// Window frame is 40x50; the glass pane inside it is 32x38 at offset (4,4).
+function windowFrame(): Grid {
+  const g = mk(40, 50);
+  rect(g, 0, 0, 40, 50, 'm');
+  rect(g, 0, 0, 40, 3, 'c'); rect(g, 0, 0, 2, 50, 'c');           // lit top and left edge
+  rect(g, 0, 44, 40, 4, 'c'); rect(g, 0, 48, 40, 2, 'o');          // sill, with a dark underside
+  rect(g, 38, 3, 2, 41, 'k');                                      // shaded right edge
+  rect(g, 3, 3, 34, 40, 'o');                                      // dark ring around the pane
+  rect(g, 4, 4, 32, 38, '.');                                      // the pane: see-through
+  rect(g, 19, 4, 2, 38, 'c'); rect(g, 4, 22, 32, 2, 'c');          // mullions
+  rect(g, 20, 4, 1, 38, 'm'); rect(g, 4, 23, 32, 1, 'm');
+  for (const [x, y] of [[1, 1], [38, 1], [1, 46], [38, 46]] as const) px(g, x, y, 'd'); // studs
+  px(g, 0, 0, '.'); px(g, 39, 0, '.');
+  return g;
+}
+/** Intact glass: a few pale glints, mostly clear. */
+function windowGlass(): Grid {
+  const g = mk(32, 38);
+  for (let i = 0; i < 7; i++) px(g, 3 + i, 4 + i, i % 3 === 0 ? 'b' : 'd');
+  for (let i = 0; i < 4; i++) px(g, 6 + i, 3 + i + 5, 'd');
+  for (let i = 0; i < 6; i++) px(g, 20 + i, 26 + i, i % 2 ? 'd' : 'b');
+  return g;
+}
+/** Smashed glass: jagged teeth left on the edges, the middle is open. */
+function windowBroken(): Grid {
+  const g = mk(32, 38);
+  for (let x = 0; x < 32; x++) {
+    const top = (x * 7 + 3) % 5, bot = (x * 5 + 1) % 4;
+    rect(g, x, 0, 1, top, x % 3 ? 'd' : 'b');
+    rect(g, x, 38 - bot, 1, bot, x % 3 ? 'd' : 'b');
+  }
+  for (let y = 0; y < 38; y++) {
+    const l = (y * 3 + 2) % 4, r = (y * 5 + 2) % 3;
+    rect(g, 0, y, l, 1, y % 3 ? 'd' : 'b');
+    rect(g, 32 - r, y, r, 1, y % 3 ? 'd' : 'b');
+  }
+  return g;
+}
+/** Three boards nailed across the window. */
+function windowBoards(): Grid {
+  const g = mk(32, 38);
+  for (const y0 of [4, 16, 28]) {
+    for (let x = 0; x < 32; x++) {
+      const y = y0 + Math.floor((x - 16) / 9);
+      px(g, x, y, 'N'); rect(g, x, y + 1, 1, 3, 'q'); px(g, x, y + 4, 'Q'); px(g, x, y + 5, 'r');
+      if ((x * 5 + y0) % 11 === 0) px(g, x, y + 2, 'r'); // grain
+    }
+    for (const x of [2, 29]) px(g, x, y0 + Math.floor((x - 16) / 9) + 2, 'l'); // nails
+  }
+  return g;
+}
+/** 16x16 brick tile (same look as the old hallway wall). */
+function wallTile(): Grid {
+  const g = mk(16, 16);
+  rect(g, 0, 0, 16, 16, 'A');
+  for (let row = 0; row < 2; row++) {
+    const off = row * 8;
+    for (let x = 0; x < 16; x++) {
+      const bx = (x - off + 16) % 16;
+      if (bx >= 1 && bx <= 14) for (let y = 1; y <= 6; y++) px(g, x, row * 8 + y, 'a');
+    }
+  }
+  return g;
+}
+/** Blink smoke: four frames growing, then thinning out. */
+function smoke(k: number): Grid {
+  const g = mk(16, 16);
+  const r = [3, 5, 7, 8][k]!;
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    const d = Math.hypot(x - 7.5, y - 7.5);
+    if (d > r) continue;
+    if (k >= 2 && (x * 3 + y * 5 + k) % (k === 2 ? 4 : 2) === 0) continue; // holes as it fades
+    px(g, x, y, d > r - 1.5 ? 'c' : (x + y) % 5 === 0 ? 'b' : 'd');
+  }
+  return g;
+}
+
 // ---------- sprite list (file name -> frames) ----------
 const SPRITES: Record<string, Grid[]> = {
   reaper_idle: reaperIdle,
@@ -198,6 +278,12 @@ const SPRITES: Record<string, Grid[]> = {
   door_frame: [doorFrame()],
   door_panel: [doorPanel()],
   tombstone: [tombstone],
+  window_frame: [windowFrame()],
+  window_glass: [windowGlass()],
+  window_broken: [windowBroken()],
+  window_boards: [windowBoards()],
+  mansion_wall: [wallTile()],
+  smoke: [0, 1, 2, 3].map(smoke),
   coin,
   ghost,
 };

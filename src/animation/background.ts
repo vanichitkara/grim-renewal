@@ -3,7 +3,9 @@
  * Call paintBg() once; blit the returned canvas every frame with drawImage().
  */
 
-/** Hallway spans x 0..HALL; the world (hallway + archway + yard) is WORLD wide. */
+import { getSprite } from './sprites.ts';
+
+/** The mansion front spans x 0..HALL; the world (hallway + archway + yard) is WORLD wide. */
 const HALL = 500;
 const WORLD = 800;
 const H = 220;
@@ -15,82 +17,80 @@ export function paintBg(): HTMLCanvasElement {
   bg.height = H;
   const b = bg.getContext('2d')!;
 
-  // Upper wall — brick tiles
+  paintMansion(b);
+  paintYard(b);
+  paintArch(b);
+  return bg;
+}
+
+/** Mansion front, world x 0..HALL: roof, two floors of wall, a cornice between them, a stone porch. */
+function paintMansion(b: CanvasRenderingContext2D): void {
+  // Wall. Uses the mansion_wall brick tile once sprites are loaded, rectangles before that.
   b.fillStyle = '#1b1529';
   b.fillRect(0, 0, HALL, FLOOR);
-  b.fillStyle = '#211a33';
-  for (let row = 0, y = 0; y < FLOOR - 30; y += 8, row++) {
-    const off = (row % 2) * 8;
-    for (let x = -16; x < HALL; x += 16) {
-      b.fillRect(x + off + 1, y + 1, 14, 6);
+  const tile = getSprite('mansion_wall');
+  if (tile) {
+    b.imageSmoothingEnabled = false;
+    for (let y = 24; y < FLOOR - 6; y += 16) {
+      for (let x = 0; x < HALL; x += 16) b.drawImage(tile.bitmap, x, y);
+    }
+  } else {
+    b.fillStyle = '#211a33';
+    for (let row = 0, y = 24; y < FLOOR - 6; y += 8, row++) {
+      const off = (row % 2) * 8;
+      for (let x = -16; x < HALL; x += 16) b.fillRect(x + off + 1, y + 1, 14, 6);
     }
   }
 
-  // Floor edge
-  b.fillStyle = '#271e3a';
-  b.fillRect(0, FLOOR - 28, HALL, 28);
-  b.fillStyle = '#3a2d52';
-  b.fillRect(0, FLOOR - 30, HALL, 2);
-
-  // Floor tiles
-  b.fillStyle = '#21192f';
-  for (let x = 4; x < HALL; x += 28) {
-    b.fillRect(x, FLOOR - 24, 22, 20);
+  // Roof: slate rows, a chimney, and a stone eave.
+  b.fillStyle = '#120e1c';
+  b.fillRect(0, 0, HALL, 24);
+  b.fillStyle = '#1c162b';
+  for (let y = 3; y < 22; y += 6) {
+    for (let x = ((y / 6) % 2) * 6; x < HALL; x += 12) b.fillRect(x, y, 11, 3);
   }
+  b.fillStyle = '#120e1c';
+  b.fillRect(452, 0, 18, 24);
+  b.fillStyle = '#2a2240';
+  b.fillRect(450, 0, 22, 3);
+  b.fillStyle = '#3a2d52';
+  b.fillRect(0, 22, HALL, 2);
+  b.fillStyle = '#2a2240';
+  b.fillRect(0, 24, HALL, 3);
 
-  // Ground below floor
+  // Cornice between the floors.
+  b.fillStyle = '#2a2240';
+  b.fillRect(0, 102, HALL, 5);
+  b.fillStyle = '#3a2d52';
+  b.fillRect(0, 102, HALL, 1);
+  b.fillStyle = '#120e1c';
+  b.fillRect(0, 107, HALL, 2);
+
+  // Porch: stone steps along the ground line, then the dark ground.
+  b.fillStyle = '#271e3a';
+  b.fillRect(0, FLOOR - 6, HALL, 6);
+  b.fillStyle = '#3a2d52';
+  b.fillRect(0, FLOOR - 6, HALL, 1);
   b.fillStyle = '#140f1e';
   b.fillRect(0, FLOOR, HALL, H - FLOOR);
   b.fillStyle = '#1c1529';
-  for (let y = FLOOR + 6; y < H; y += 7) {
-    b.fillRect(0, y, HALL, 1);
-  }
+  for (let y = FLOOR + 6; y < H; y += 7) b.fillRect(0, y, HALL, 1);
   b.fillStyle = '#2e2442';
   b.fillRect(0, FLOOR, HALL, 1);
 
-  // Moonlit window
-  b.fillStyle = '#3a2d52';
-  b.fillRect(20, 34, 56, 70);
-  b.fillStyle = '#0c1530';
-  b.fillRect(24, 38, 48, 62);
-  b.fillStyle = '#e9e4c9';
-  b.beginPath();
-  b.arc(46, 60, 11, 0, Math.PI * 2);
-  b.fill();
-  b.fillStyle = '#0c1530';
-  b.beginPath();
-  b.arc(51, 56, 10, 0, Math.PI * 2);
-  b.fill();
-  b.fillStyle = '#3a2d52';
-  b.fillRect(46, 38, 3, 62);
-  b.fillRect(24, 68, 48, 3);
-
-  // Moonlight shaft
-  b.fillStyle = 'rgba(200,210,255,0.06)';
-  b.beginPath();
-  b.moveTo(24, FLOOR);
-  b.lineTo(72, FLOOR);
-  b.lineTo(110, H);
-  b.lineTo(10, H);
-  b.fill();
-
-  // Cobweb top-left corner
+  // Cobweb, top-left corner of the roofline.
   b.strokeStyle = 'rgba(200,190,220,0.25)';
   b.lineWidth = 1;
   for (let k = 1; k <= 3; k++) {
     b.beginPath();
-    b.arc(0, 0, k * 9, 0, Math.PI / 2);
+    b.arc(0, 27, k * 9, -Math.PI / 2, 0);
     b.stroke();
   }
   b.beginPath();
-  b.moveTo(0, 0); b.lineTo(30, 10);
-  b.moveTo(0, 0); b.lineTo(18, 24);
-  b.moveTo(0, 0); b.lineTo(6, 30);
+  b.moveTo(0, 27); b.lineTo(30, 17);
+  b.moveTo(0, 27); b.lineTo(18, 51);
+  b.moveTo(0, 27); b.lineTo(6, 57);
   b.stroke();
-
-  paintYard(b);
-  paintArch(b);
-  return bg;
 }
 
 /** Moonlit graveyard, world x HALL..WORLD. */

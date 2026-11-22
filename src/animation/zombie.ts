@@ -103,6 +103,16 @@ export interface ZombieConfig {
   phoneOnly?: boolean;
 }
 
+/** Where and how big to draw. Defaults are the door pose (feet on the floor, steps left as it comes out). */
+export interface ZombiePose {
+  /** Y of the feet. */
+  y?: number;
+  /** Pixels it slides left when fully out (0 for a window). */
+  slide?: number;
+  /** Replaces z.scale (window zombies are drawn smaller). */
+  scale?: number;
+}
+
 /** Draw the zombie for one slot. No-op when z.alive is false. */
 export function drawZombieFor(
   ctx: CanvasRenderingContext2D,
@@ -110,18 +120,19 @@ export function drawZombieFor(
   slot: DoorSlotState,
   config: ZombieConfig,
   t: number,
+  pose: ZombiePose = {},
 ): void {
   const { z } = slot;
   if (!z.alive) return;
 
   const { forgotten, shirt } = config;
-  const sc = z.scale * z.grow;
+  const sc = (pose.scale ?? z.scale) * z.grow;
   const skin = mix('#8fc25a', '#7d8b4a', forgotten);
   const dark = mix('#5f8a35', '#4b5530', forgotten);
 
   ctx.save();
   ctx.globalAlpha = 1 - z.dissolve;
-  ctx.translate(cx + 2 - z.out * 9, FLOOR);
+  ctx.translate(cx + 2 - z.out * (pose.slide ?? 9), pose.y ?? FLOOR);
   ctx.scale(sc, sc * (1 - 0.35 * z.dissolve));
   ctx.rotate(Math.sin(t * 2.2 + cx) * 0.035 * (1 + forgotten));
 
