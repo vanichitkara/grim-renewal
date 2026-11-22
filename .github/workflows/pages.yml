@@ -28,6 +28,9 @@ jobs:
       - name: Tests
         run: npm test
       - name: Build (relative paths, works under /grim-renewal/)
+        env:
+          # Public address of the shared-tips server (a repository variable, not a secret). Empty = feature off.
+          GRIM_COMMUNITY_URL: ${{ vars.GRIM_COMMUNITY_URL }}
         run: npx vite build
       - uses: actions/upload-pages-artifact@v5
         with:

@@ -195,3 +195,32 @@ Final frame: the hallway, four tombstones, $995.64/yr saved.
   Whatever is chosen, its secret lives in the host's SERVER-side settings, never in a `VITE_` variable.
   Hosting stays on GitHub Pages for now (free, already live). Vercel Hobby is free for
   personal, non-commercial use only.
+
+---
+
+## Design notes: tracking cancels and picking a cancel method (2026-11-22)
+
+**Standing rule from the user: do not open a pull request for a plan change. Open one only when asked.**
+
+### Did the user really cancel? Three levels of evidence
+We find a subscription because it sends receipts. So when its receipts stop, that is a real signal.
+
+| Level | Evidence | Label shown |
+|---|---|---|
+| Confirmed | A cancellation email arrived, or the user pressed "I cancelled it" and gave a date | "Cancelled" |
+| Likely | The expected receipt did not arrive: last receipt date + the usual gap (monthly: about 30 days, annual: about 365) + a 5-day grace | "Likely cancelled: no receipt since <date>" |
+| Verified | Confirmed or Likely, AND at least one full billing cycle passed with no new receipt | "Verified by email" |
+
+- Expected date comes from the receipt history (median gap between receipts, or `renewalDate` if the receipt gave one).
+- Savings are shown as two numbers: **Avoided so far** (missed renewals x amount, real evidence) and **Next 12 months** (an estimate, labelled as one).
+- A new receipt after cancel/verify turns the card into a **Revenant** (the dispute flow).
+- Known weak spots, say them in the UI: receipt moved or missed by the filter, billing through Apple/Google, payment failed or paused, sender changed, 13-month look-back for annual plans. When unsure show "Not sure yet", never a saving.
+- Later option: bank "card was charged" alert emails are readable with the same read-only access and would cover merchants that send no receipt. Formats differ by bank; do not promise it.
+
+### How to cancel? We often do not know, so show all ways, best guess first
+A "Cancel kit" per subscription with three tabs: Online, Email, Phone. Pick the first tab from what we know, with a label:
+1. The receipt has a manage or cancel link: Online tab first, "from your receipt".
+2. The receipt says call, or has a phone number near "cancel": Phone tab first, "from your receipt".
+3. The merchant is in a small hand-kept list (start with about 20): use that, "from our list".
+4. Otherwise: Online tab first with "We could not tell how this one works. Try these in order": the account page, a web search link for "<merchant> cancel subscription", then the Email draft, then the Phone script if a number is known.
+After the user finishes, ask "What worked?" (online, email, phone, other) so the card learns. Sharing that across users needs a server and is a later step.
