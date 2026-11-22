@@ -156,15 +156,24 @@ Final frame: the hallway, four tombstones, $995.64/yr saved.
 
 ## In progress / queued (set 2026-11-22)
 
-- [~] **Cancellation Player** (worker running): watch the Reaper cancel on dummy merchant sites in `public/mock/`, approve each step.
-- [ ] **Boss Door call console** (next, after the Player lands; both edit `index.html`):
-  - A simulated AI phone agent: dial, menu, hold, human agent, the AI says it is an AI calling for the user, declines offers, gets a confirmation number. Clearly labelled "Simulation: no real call is placed".
-  - Behind a `VoiceCallProvider` interface so a real phone provider can plug in later.
-  - Explicit user consent before the call, listen-in, Take over and Hang up buttons.
-  - A "seamless kit" that is real today: a tap-to-call link, the copy-script button, a written-cancellation email draft, a dispute letter, and a calendar reminder (.ics) to check the card 35 days later for a returning charge.
-  - Remove the invented "Tuesday mornings have the shortest wait" line from the Boss Door panel unless a source is found.
-  - `docs/phone-agent.md`: how a real AI call would work, and the legal limits (FCC 24-17 treats AI voices as "artificial voice" under the TCPA; California AI-voice disclosure and all-party recording consent; identity checks hand the call to the user).
-- [ ] Then: Revenant dispute flow, then Ghosts detection (above).
+- [x] **Cancellation Player** (done, merged): watch the Reaper cancel on dummy merchant sites in `public/mock/`, approve each step.
+- **DROPPED (user decision 2026-11-22): the simulated AI phone-call console.** The app will not place calls for the user
+  (legal limits: FCC 24-17 treats AI voices as "artificial voice" under the TCPA; California AI-voice disclosure and
+  all-party recording consent; companies check identity). A fake call console would promise something we will not ship.
+- [ ] **Call kit** (replaces it): for a phone-only company, show a tap-to-call link, the call script with a copy button,
+  a written-cancellation email draft (opens the user's mail app with the text filled in), a dispute letter, and a
+  calendar reminder (.ics) to re-check for a returning charge. Remove the invented "Tuesday mornings have the
+  shortest wait" line.
+- [ ] **Verified savings (the core idea)**: after the user cancels, sweep the inbox again. Count a saving only when a
+  cancellation confirmation email appears AND no new receipt arrives after the next renewal date. Show two numbers:
+  "Pending" and "Verified". Gold coins drop on verification, not at the click. Read-only Gmail, store only a flag and a date.
+- [ ] **Cancel guide per subscription**: the easiest path first (cancel link and steps, email draft, call kit), with a
+  status: Found, Cancel started, Waiting to verify, Verified, Came back.
+- [ ] **Trial guard**: a reminder (.ics) 2 days before a trial ends.
+- [ ] **Results-first screen plus a List view** next to the hallway scene (see the UX notes in the chat of 2026-11-22).
+- [ ] Then: Revenant dispute flow (fits Verified savings: a charge after verification becomes a Revenant), then Ghosts.
+- Playwright "assisted cancel" stays a local power-user feature. The user signs in in the visible window; the robot never
+  types a password (the adapter already stops at a login page; resume-after-login is a possible next step).
 
 ---
 
