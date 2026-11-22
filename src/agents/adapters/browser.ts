@@ -12,6 +12,8 @@ export interface PageElement {
   role: string;
   name: string;
   inputType?: string;
+  /** Radio or checkbox state, when the driver can tell. */
+  checked?: boolean;
 }
 
 export interface PageSnapshot {
@@ -28,7 +30,9 @@ export interface BrowserDriver {
 
 const MAX_STEPS = 8;
 const FIRST_STEP = /cancel|end membership|turn off|unsubscribe/i;
-const LATER_STEP = /confirm|yes|continue/i;
+const LATER_STEP = /confirm|yes|continue|submit/i;
+/** Used only when no cancel control is on screen yet: walk toward the plan page. */
+const NAV_STEP = /manage|billing|settings|membership|my account/i;
 const DONE = /cancel(l)?ed|you have been|no longer be charged/i;
 
 export function createBrowserAdapter(makeDriver: () => BrowserDriver): CancelAdapter {
@@ -37,6 +41,7 @@ export function createBrowserAdapter(makeDriver: () => BrowserDriver): CancelAda
     const driver = makeDriver();
     try {
       await driver.navigate(sub.cancelUrl);
+      const visitedNav = new Set<string>();
       for (let step = 0; step < MAX_STEPS; step++) {
         const { elements } = await driver.snapshot();
         if (elements.some((e) => e.inputType === 'password')) {
@@ -44,9 +49,24 @@ export function createBrowserAdapter(makeDriver: () => BrowserDriver): CancelAda
         }
         if (elements.some((e) => DONE.test(e.name))) return { ok: true };
         const re = step === 0 ? FIRST_STEP : new RegExp(`${LATER_STEP.source}|${FIRST_STEP.source}`, 'i');
-        const target = elements.find((e) => e.ref !== '' && e.inputType === undefined && re.test(e.name));
+        const clickable = (e: PageElement) => e.ref !== '' && e.inputType === undefined;
+        let target = elements.find((e) => clickable(e) && re.test(e.name));
+        let kind: 'click' | 'check' = 'click';
+        if (!target && step > 0) {
+          // Surveys and "I understand" boxes gate the next button: tick the first unticked one.
+          target = elements.find(
+            (e) => e.ref !== '' && (e.inputType === 'radio' || e.inputType === 'checkbox') && e.checked === false,
+          );
+          if (target) kind = 'check';
+        }
+        if (!target) {
+          target = elements.find((e) => clickable(e) && !visitedNav.has(e.ref) && NAV_STEP.test(e.name));
+          if (target) visitedNav.add(target.ref);
+        }
         if (!target) return { ok: false, reason: 'no_cancel_control' };
-        if (!(await confirm())) return { ok: false, reason: 'user_declined' };
+        if (!(await confirm({ name: target.name, ref: target.ref, kind }))) {
+          return { ok: false, reason: 'user_declined' };
+        }
         await driver.click(target.ref);
       }
       // Final look after the last click.

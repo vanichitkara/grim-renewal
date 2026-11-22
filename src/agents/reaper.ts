@@ -14,8 +14,16 @@ import { emit, subscribeToId } from './event-bus.ts';
 
 export type AdapterResult = { ok: true } | { ok: false; reason: string };
 
+/** What the next step will touch. Lets a UI say what it is asking the user to approve. */
+export interface ConfirmStep {
+  /** Accessible name of the control. Display with textContent only. */
+  name: string;
+  ref: string;
+  kind: 'click' | 'check';
+}
+
 /** Resolves true when the user okays the next destructive step. */
-export type Confirm = () => Promise<boolean>;
+export type Confirm = (step?: ConfirmStep) => Promise<boolean>;
 
 export type CancelAdapter = (sub: Subscription, confirm: Confirm) => Promise<AdapterResult>;
 

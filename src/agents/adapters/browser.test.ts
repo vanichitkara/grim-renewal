@@ -19,7 +19,7 @@ function fake(pages: PageSnapshot[]) {
   const d = {
     navigate: vi.fn(async () => {}),
     snapshot: vi.fn(async () => pages[Math.min(i, pages.length - 1)] ?? empty),
-    click: vi.fn(async () => { i++; }),
+    click: vi.fn(async (_ref: string) => { i++; }),
     type: vi.fn(async () => {}),
     close: vi.fn(async () => {}),
   };
@@ -81,6 +81,58 @@ describe('browser adapter', () => {
     const res = await createBrowserAdapter(() => d)(sub(), yes);
     expect(res).toEqual({ ok: false, reason: 'browser_error' });
     expect(d.close).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('browser adapter: nav, survey and checkbox steps', () => {
+  const radio = (ref: string, name: string, checked: boolean) =>
+    ({ ref, role: 'radio', name, inputType: 'radio', checked });
+  const done = { elements: [{ ref: '', role: 'text', name: 'Your subscription has been cancelled.' }] };
+
+  it('walks nav -> cancel -> retention -> survey -> submit -> confirm, naming each step', async () => {
+    const d = fake([
+      { elements: [btn('n', 'Manage plan'), btn('o', 'Sign out')] },
+      { elements: [btn('c', 'Cancel plan'), btn('k', 'Keep my plan')] },
+      { elements: [btn('s', 'Stay for 50% off'), btn('t', 'No thanks, continue')] },
+      { elements: [radio('r', 'Too expensive', false)] },
+      { elements: [radio('r', 'Too expensive', true), btn('u', 'Submit')] },
+      { elements: [btn('f', 'Confirm cancellation')] },
+      done,
+    ]);
+    const confirm = vi.fn(yes);
+    const res = await createBrowserAdapter(() => d)(sub(), confirm);
+    expect(res).toEqual({ ok: true });
+    expect(d.click.mock.calls.map((c) => c[0])).toEqual(['n', 'c', 't', 'r', 'u', 'f']);
+    expect(confirm.mock.calls[3]).toEqual([{ name: 'Too expensive', ref: 'r', kind: 'check' }]);
+    expect(confirm.mock.calls[0]).toEqual([{ name: 'Manage plan', ref: 'n', kind: 'click' }]);
+  });
+
+  it('ticks an unticked checkbox, then clicks the cancel button that appears', async () => {
+    const d = fake([
+      { elements: [btn('a', 'Cancel subscription')] },
+      { elements: [{ ref: 'x', role: 'checkbox', name: 'I understand I lose my files', inputType: 'checkbox', checked: false }] },
+      { elements: [btn('b', 'Cancel subscription')] },
+      done,
+    ]);
+    expect(await createBrowserAdapter(() => d)(sub(), yes)).toEqual({ ok: true });
+    expect(d.click.mock.calls.map((c) => c[0])).toEqual(['a', 'x', 'b']);
+  });
+
+  it('never ticks a box on the first page, and visits each nav control only once', async () => {
+    const box = (checked: boolean) => ({ ref: 'x', role: 'checkbox', name: 'Newsletter', inputType: 'checkbox', checked });
+    const d = fake([
+      { elements: [btn('n', 'Billing'), box(false)] },
+      { elements: [btn('n', 'Billing'), box(false)] },
+      { elements: [btn('n', 'Billing'), box(true)] },
+    ]);
+    const res = await createBrowserAdapter(() => d)(sub(), yes);
+    expect(d.click.mock.calls.map((c) => c[0])).toEqual(['n', 'x']);
+    expect(res).toEqual({ ok: false, reason: 'no_cancel_control' });
+  });
+
+  it('does not tick a box the driver cannot read the state of', async () => {
+    const d = fake([{ elements: [btn('a', 'Cancel'), ] }, { elements: [{ ref: 'x', role: 'checkbox', name: 'Box', inputType: 'checkbox' }] }]);
+    expect(await createBrowserAdapter(() => d)(sub(), yes)).toEqual({ ok: false, reason: 'no_cancel_control' });
   });
 });
 
