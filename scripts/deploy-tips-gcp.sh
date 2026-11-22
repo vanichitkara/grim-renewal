@@ -10,7 +10,8 @@
 #   1. checks the gcloud tool and your sign-in, and that the project exists
 #   2. turns on Cloud Run, Cloud Build, Artifact Registry and Firestore (only these)
 #   3. creates the Firestore database in Native mode if there is none
-#   4. creates a service account that may only read and write Firestore
+#   4. creates two service accounts: one that may only read and write Firestore (runs the server),
+#      and one that may only build it (Cloud Run Builder), so the build never relies on the default account
 #   5. builds the container from ./Dockerfile and deploys it (public https address, small limits)
 #   6. checks /health from the address it got, and checks a foreign website is refused
 #   7. prints the address and the two commands to put it on the live site
@@ -28,6 +29,7 @@ PROJECT="${1:-}"
 REGION="${2:-us-central1}"
 SERVICE="grim-tips"
 SA_NAME="grim-tips-runner"
+BUILD_SA_NAME="grim-tips-builder"
 ORIGINS="${GRIM_CORS_ORIGINS:-https://vanichitkara.github.io}"
 
 say()  { printf '\n\033[1m==> %s\033[0m\n' "$*"; }
@@ -65,7 +67,7 @@ else
   gcloud firestore databases create --database='(default)' --location="$REGION" --type=firestore-native --project "$PROJECT"
 fi
 
-say "4/7 Service account with Firestore access only"
+say "4/7 Service accounts: one to run (Firestore only), one to build (Cloud Run Builder only)"
 SA_EMAIL="${SA_NAME}@${PROJECT}.iam.gserviceaccount.com"
 if ! gcloud iam service-accounts describe "$SA_EMAIL" --project "$PROJECT" >/dev/null 2>&1; then
   gcloud iam service-accounts create "$SA_NAME" --display-name="Grim Renewal tips server" --project "$PROJECT"
@@ -74,11 +76,25 @@ gcloud projects add-iam-policy-binding "$PROJECT" \
   --member="serviceAccount:${SA_EMAIL}" --role="roles/datastore.user" --condition=None --quiet >/dev/null
 echo "$SA_EMAIL may read and write Firestore, nothing else."
 
+# Build account. Google's docs: the Cloud Build service account needs roles/run.builder for a --source deploy.
+# Using our own account avoids the project's default build account, which may lack permissions (the error you saw).
+BUILD_SA_EMAIL="${BUILD_SA_NAME}@${PROJECT}.iam.gserviceaccount.com"
+if ! gcloud iam service-accounts describe "$BUILD_SA_EMAIL" --project "$PROJECT" >/dev/null 2>&1; then
+  gcloud iam service-accounts create "$BUILD_SA_NAME" --display-name="Grim Renewal tips builder" --project "$PROJECT"
+fi
+for ROLE in roles/run.builder roles/serviceusage.serviceUsageConsumer; do
+  gcloud projects add-iam-policy-binding "$PROJECT" \
+    --member="serviceAccount:${BUILD_SA_EMAIL}" --role="$ROLE" --condition=None --quiet >/dev/null
+done
+echo "$BUILD_SA_EMAIL may build this service, nothing else."
+
 say "5/7 Building and deploying (a few minutes the first time)"
+deploy() {
 gcloud run deploy "$SERVICE" \
   --project "$PROJECT" \
   --region "$REGION" \
   --source . \
+  --build-service-account "projects/${PROJECT}/serviceAccounts/${BUILD_SA_EMAIL}" \
   --service-account "$SA_EMAIL" \
   --allow-unauthenticated \
   --ingress all \
@@ -90,6 +106,24 @@ gcloud run deploy "$SERVICE" \
   --timeout 15 \
   --set-env-vars "^@^STORE=firestore@FIRESTORE_COLLECTION=tips@TRUST_PROXY=1@HOST=0.0.0.0@GRIM_CORS_ORIGINS=${ORIGINS}" \
   --quiet
+}
+
+LOG="$(mktemp)"
+deployed=""
+for TRY in 1 2 3 4; do
+  if deploy 2>&1 | tee "$LOG"; then
+    # gcloud's exit code is the pipeline's first command only with pipefail, which is on
+    deployed=1; break
+  fi
+  if grep -q "PERMISSION_DENIED" "$LOG" && [ "$TRY" -lt 4 ]; then
+    echo "  New permissions can take a few minutes to spread. Waiting 60 s, then trying again ($TRY of 3)..."
+    sleep 60
+  else
+    break
+  fi
+done
+rm -f "$LOG"
+[ -n "$deployed" ] || fail "Deploy failed. If it still says PERMISSION_DENIED, wait 5 minutes and run this script again (it is safe to re-run)."
 
 URL="$(gcloud run services describe "$SERVICE" --project "$PROJECT" --region "$REGION" --format='value(status.url)')"
 [ -n "$URL" ] || fail "Deployed, but could not read the service address."
