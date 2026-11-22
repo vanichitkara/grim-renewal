@@ -79,16 +79,52 @@ async function seedTip(key: string): Promise<TipSummary> {
   return none;
 }
 
+// ---- the public list ------------------------------------------------------------------------
+// PRIVACY: we never ask the server about one company. That request would tell it which companies this
+// user has, with no opt-in. We download the whole public list (every reviewed company that has data) once,
+// keep it for a minute, and look the user's companies up on their own machine.
+
+const LIST_TTL_MS = 60_000;
+const FAIL_TTL_MS = 10_000;
+let listCache: { at: number; ttl: number; data: Record<string, TipSummary> | null } | null = null;
+let listInflight: Promise<Record<string, TipSummary> | null> | null = null;
+
+/** Tests only. */
+export function _resetTipsCache(): void {
+  listCache = null;
+  listInflight = null;
+}
+
+async function loadPublicList(base: string): Promise<Record<string, TipSummary> | null> {
+  if (listCache && Date.now() - listCache.at < listCache.ttl) return listCache.data;
+  listInflight ??= (async () => {
+    const r = await withRetry(`${base}/tips/all`);
+    let data: Record<string, TipSummary> | null = null;
+    const tips = r && r.status === 200 ? (r.data as { tips?: unknown } | null)?.tips : null;
+    if (tips && typeof tips === 'object') {
+      data = {};
+      for (const [k, v] of Object.entries(tips as Record<string, unknown>)) {
+        const s = asSummary(v, k);
+        if (s && s.source === 'community') data[k] = s;
+      }
+    }
+    listCache = { at: Date.now(), ttl: data ? LIST_TTL_MS : FAIL_TTL_MS, data };
+    listInflight = null;
+    return data;
+  })();
+  return listInflight;
+}
+
 /** What worked for this company. `merchantKey` must come from merchantKeyFor. Never throws. */
 export async function getTips(merchantKey: string): Promise<TipSummary> {
   const key = merchantKeyFor(merchantKey);
   if (key === null) return { merchantKey, best: null, bestWorked: 0, bestTotal: 0, methods: [], source: 'none' };
   const base = baseUrl();
   if (base !== '') {
-    const r = await withRetry(`${base}/tips?merchant=${encodeURIComponent(key)}`);
-    const s = r && r.status === 200 ? asSummary(r.data, key) : null;
-    // An allow-listed company with no community data yet still gets the starter list below.
-    if (s && s.source === 'community') return s;
+    const all = await loadPublicList(base).catch(() => null);
+    const s = all?.[key];
+    // A company with no community data yet still gets the starter list below.
+    if (s) return s;
   }
   return seedTip(key);
 }

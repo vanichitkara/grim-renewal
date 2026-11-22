@@ -39,7 +39,8 @@ project's own server) and the payload is the minimum above, so we treat it as a 
 | Route | What |
 |---|---|
 | `GET /health` | `{"ok":true}` |
-| `GET /tips?merchant=<key>` | summary: `best`, `bestWorked`, `bestTotal`, per-method counts, `source` (`community` or `none`). `Cache-Control: public, max-age=60`. A key not on the allow-list gives `source: "none"`. |
+| `GET /tips/all` | **The one the app uses.** Every reviewed company that has community data, as `{ ok, tips: { key: summary } }`. `Cache-Control: public, max-age=60`. The browser looks its own companies up in this list, so the server never learns which companies a user has. |
+| `GET /tips?merchant=<key>` (not used by the app) | summary: `best`, `bestWorked`, `bestTotal`, per-method counts, `source` (`community` or `none`). `Cache-Control: public, max-age=60`. A key not on the allow-list gives `source: "none"`. |
 | `POST /report` | body `{"merchantKey","method","worked"}`, `Content-Type: application/json`, at most 1 KB. `202` on accept or drop. |
 | `OPTIONS *` | CORS preflight |
 

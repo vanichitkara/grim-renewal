@@ -140,3 +140,33 @@ describe('committed data files', () => {
     expect(seed.merchants['ironcoregym.com'].method).toBe('phone');
   });
 });
+
+describe('GET /tips/all (the public list the app uses, so the server never learns a user\'s companies)', () => {
+  it('lists only reviewed companies that have settled community data', async () => {
+    const { store, limiter } = fresh();
+    for (let i = 0; i < 5; i++) {
+      expect((await handle(post(rep('netflix.com', 'email', true), { ip: `10.0.0.${i}` }), store, limiter, NOW, cfg)).status).toBe(202);
+    }
+    // one report for another reviewed company: not enough to settle
+    await handle(post(rep('spotify.com', 'online', true), { ip: '10.0.1.1' }), store, limiter, NOW, cfg);
+    // an off-list company is dropped and never shows
+    await handle(post(rep('tinyclinic.example', 'phone', true), { ip: '10.0.2.1' }), store, limiter, NOW, cfg);
+    const r = await handle(get('/tips/all'), store, limiter, NOW, cfg);
+    expect(r.status).toBe(200);
+    expect(r.headers['Cache-Control']).toBe('public, max-age=60');
+    const data = JSON.parse(r.body) as { ok: boolean; tips: Record<string, { best: string | null; source: string }> };
+    expect(Object.keys(data.tips)).toEqual(['netflix.com']);
+    expect(data.tips['netflix.com']).toMatchObject({ best: 'email', source: 'community' });
+  });
+
+  it('is empty, not an error, when nothing has been reported', async () => {
+    const { store, limiter } = fresh();
+    const r = await handle(get('/tips/all'), store, limiter, NOW, cfg);
+    expect(JSON.parse(r.body)).toEqual({ ok: true, tips: {} });
+  });
+
+  it('refuses another website', async () => {
+    const { store, limiter } = fresh();
+    expect((await handle(get('/tips/all', '', { origin: 'https://evil.example' }), store, limiter, NOW, cfg)).status).toBe(403);
+  });
+});

@@ -5,6 +5,7 @@
  */
 import { createHash, randomBytes } from 'node:crypto';
 import { monthKey, summarize } from './rank.ts';
+import type { TipSummary } from './types.ts';
 import { parseMerchantKey, parseSubmission } from './validate.ts';
 import type { TipStore } from './types.ts';
 
@@ -113,6 +114,18 @@ export async function handle(
   }
 
   if (req.method === 'GET' && req.path === '/health') return json(200, { ok: true }, cors);
+
+  // The whole public list in one answer. The browser looks its own companies up in it, so the server
+  // never learns which companies a user has (a per-company request would tell it).
+  if (req.method === 'GET' && req.path === '/tips/all') {
+    const tips: Record<string, TipSummary> = {};
+    for (const key of cfg.allowed) {
+      const s = summarize(await store.get(key), key, now);
+      // Only settled answers are public. A half-built tally is not published, so it cannot be watched or nudged.
+      if (s.source === 'community' && s.best !== null) tips[key] = s;
+    }
+    return json(200, { ok: true, tips }, { ...cors, 'Cache-Control': 'public, max-age=60' });
+  }
 
   if (req.method === 'GET' && req.path === '/tips') {
     const key = parseMerchantKey(new URLSearchParams(req.query).get('merchant'));

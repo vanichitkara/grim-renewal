@@ -10,6 +10,9 @@ import { scoreSubscriptions } from '../agents/coroner.ts';
 import { scanActivitySignals } from './activity-scout.ts';
 import { emit } from '../agents/event-bus.ts';
 import { requestCancel } from '../agents/reaper.ts';
+import { sweepForChanges, type SweepResult } from '../savings/sweep.ts';
+import { loadClaims } from '../state/claims.ts';
+import { loadLastScan, saveLastScan } from '../kit/last-scan.ts';
 
 /**
  * Run the full subscription discovery pipeline.
@@ -27,6 +30,7 @@ export async function runPipeline(
   token: string,
   accountEmail: string,
   onProgress?: (p: ScanProgress) => void,
+  onSweep?: (results: SweepResult[]) => void,
 ): Promise<number> {
   // Step 1: scan inbox for receipts.
   const subs = await scanInbox(token, accountEmail, undefined, onProgress);
@@ -44,5 +48,10 @@ export async function runPipeline(
     // Parks the sub at `knocking`; nothing runs until the user approves it in the UI.
     requestCancel(sub);
   }
+
+  // Hooks: compare with the last scan (saved locally: ids, dates, amounts only), then save this one.
+  const prev = loadLastScan();
+  saveLastScan(scored);
+  onSweep?.(sweepForChanges(prev, scored, loadClaims()));
   return scored.length;
 }
