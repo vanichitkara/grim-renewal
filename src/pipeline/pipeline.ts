@@ -23,7 +23,7 @@ import { loadLastScan, saveLastScan } from '../kit/last-scan.ts';
  * 3. Score subscriptions (Coroner).
  * 4. Emit `discovered` + `scored` AgentEvents for each subscription onto the bus.
  *
- * @param token        - gmail.readonly OAuth access token (memory-only, never persisted).
+ * @param token        - gmail.readonly OAuth access token (stored only by session-auth.ts, never logged).
  * @param accountEmail - Authenticated Gmail address; stored only in Subscription.accountEmail.
  */
 export async function runPipeline(

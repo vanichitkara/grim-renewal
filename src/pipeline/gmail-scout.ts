@@ -2,7 +2,7 @@
  * Gmail Scout — scans a user's inbox for subscription receipts.
  *
  * PRIVACY rules (non-negotiable):
- *  - token is NEVER written to disk, localStorage, or any persistent store.
+ *  - this module never stores the token; only session-auth.ts keeps it (browser only, until expiry or Sign out).
  *  - Only gmail.readonly scope is used — no write, send, delete, or labels.
  *  - Queries are filtered at the API level (q param); we never download unfiltered.
  *  - Raw message text is discarded immediately after parseReceipt() returns.
@@ -271,7 +271,7 @@ export interface ScanProgress { read: number; total: number; found: number }
 /**
  * Scan the user's Gmail inbox for subscription receipts.
  *
- * @param token - A valid gmail.readonly OAuth access token (memory-only, never persisted).
+ * @param token - A valid gmail.readonly OAuth access token (stored only by session-auth.ts, never logged).
  * @param accountEmail - The Gmail account address, stored only in the Subscription record.
  * @returns An array of deduplicated Subscription records. forgottenScore is 0 (Coroner fills it).
  *

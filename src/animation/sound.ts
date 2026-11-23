@@ -6,6 +6,53 @@
 
 let ac: AudioContext | null = null;
 let muted = false;
+/** 0..1, multiplies every sound. */
+let volume = 1;
+
+export const SOUND_KEY = 'grim_sound';
+type Listener = (s: { muted: boolean; volume: number }) => void;
+const listeners = new Set<Listener>();
+
+function store(): Storage | null {
+  try { return typeof localStorage !== 'undefined' ? localStorage : null; } catch { return null; }
+}
+
+/** Parse saved sound settings. Junk falls back to the defaults (sound on, full volume). */
+export function parseSoundPrefs(raw: string | null): { muted: boolean; volume: number } {
+  try {
+    const o = raw ? (JSON.parse(raw) as Record<string, unknown>) : {};
+    const v = typeof o['volume'] === 'number' && Number.isFinite(o['volume']) ? Math.min(1, Math.max(0, o['volume'])) : 1;
+    return { muted: o['muted'] === true, volume: v };
+  } catch {
+    return { muted: false, volume: 1 };
+  }
+}
+
+{
+  const p = parseSoundPrefs(store()?.getItem(SOUND_KEY) ?? null);
+  muted = p.muted;
+  volume = p.volume;
+}
+
+function changed(): void {
+  try { store()?.setItem(SOUND_KEY, JSON.stringify({ muted, volume })); } catch { /* private mode */ }
+  listeners.forEach((f) => f({ muted, volume }));
+}
+
+/** Called on every change to mute or volume, so every control stays in step. */
+export function onSoundChange(f: Listener): () => void {
+  listeners.add(f);
+  return () => listeners.delete(f);
+}
+
+export function getVolume(): number {
+  return volume;
+}
+
+export function setVolume(v: number): void {
+  volume = Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 1;
+  changed();
+}
 
 function audio(): AudioContext | null {
   if (!ac) {
@@ -40,7 +87,8 @@ export function tone(
   if (slideTo != null) {
     o.frequency.exponentialRampToValueAtTime(slideTo, t + dur);
   }
-  g.gain.setValueAtTime(vol, t);
+  if (volume <= 0) return;
+  g.gain.setValueAtTime(vol * volume, t);
   g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
   o.connect(g).connect(a.destination);
   o.start(t);
@@ -59,7 +107,8 @@ export function noise(dur: number, vol = 0.25, freq = 1200): void {
   const g = a.createGain();
   f.type = 'bandpass';
   f.frequency.value = freq;
-  g.gain.value = vol;
+  if (volume <= 0) return;
+  g.gain.value = vol * volume;
   src.buffer = buf;
   src.connect(f).connect(g).connect(a.destination);
   src.start();
@@ -76,6 +125,7 @@ export function isMuted(): boolean {
 
 export function setMuted(value: boolean): void {
   muted = value;
+  changed();
 }
 
 export const sfx = {

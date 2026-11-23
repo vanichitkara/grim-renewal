@@ -43,7 +43,7 @@ import {
   drawParticles,
 } from './particles.ts';
 import type { Particle } from './particles.ts';
-import { sfx, setMuted, isMuted, unlockAudio } from './sound.ts';
+import { sfx, setMuted, isMuted, unlockAudio, onSoundChange } from './sound.ts';
 
 // Canvas constants — 480×220, never scaled on the element itself.
 const W = 480;
@@ -1337,12 +1337,14 @@ export function initHallway(
     });
 
     const muteBtn = document.getElementById('mute') as HTMLButtonElement | null;
-    muteBtn?.addEventListener('click', () => {
-      const next = !isMuted();
-      setMuted(next);
-      muteBtn.textContent = next ? 'Sound off' : 'Sound on';
-      muteBtn.setAttribute('aria-pressed', String(next));
-    });
+    const paintMute = (m: boolean): void => {
+      if (!muteBtn) return;
+      muteBtn.textContent = m ? 'Sound off' : 'Sound on';
+      muteBtn.setAttribute('aria-pressed', String(m));
+    };
+    paintMute(isMuted()); // the saved setting from Settings
+    onSoundChange((s) => paintMute(s.muted));
+    muteBtn?.addEventListener('click', () => setMuted(!isMuted()));
 
     document.getElementById('copyScript')?.addEventListener('click', () => {
       const txt = document.getElementById('bossScript');

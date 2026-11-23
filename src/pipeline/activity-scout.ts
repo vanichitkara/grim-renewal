@@ -4,7 +4,7 @@
  * Stub: returns conservative defaults for every subscription until the second
  * Gmail pass is implemented.
  *
- * PRIVACY: token is memory-only, never logged or persisted.
+ * PRIVACY: token is never logged; only session-auth.ts stores it.
  */
 
 import type { Subscription } from '../types.ts';
@@ -15,7 +15,7 @@ import type { ActivitySignals } from '../agents/coroner.ts';
  *
  * Stub — will query Gmail for login alerts and activity emails per merchant.
  *
- * @param token - gmail.readonly OAuth token (memory-only, never persisted).
+ * @param token - gmail.readonly OAuth token (stored only by session-auth.ts, never logged).
  * @param subs  - Subscriptions from Scout; used to key the returned signals.
  * @returns Conservative ActivitySignals for each subscription (same order).
  */

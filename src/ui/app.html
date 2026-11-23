@@ -228,6 +228,20 @@ body.locked .proto, body.locked #bridgeChip, body.locked #scanStatus, body.locke
 .gate .consent { color: var(--bone); border: 1px dashed var(--stone); border-radius: 3px; padding: 12px 14px; font-size: 14px; }
 .gate .gate-msg { color: var(--blood); min-height: 1.4em; }
 .gate button { font-size: 16px; padding: 12px 22px; }
+
+/* Settings dialog */
+.settings { padding: 0; border: 1px solid var(--stone); border-radius: 4px; background: var(--crypt); color: var(--bone); width: min(420px, calc(100vw - 32px)); }
+.settings::backdrop { background: rgba(18, 14, 28, 0.75); }
+.settings-body { padding: 18px 20px; display: grid; gap: 18px; }
+.settings-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.settings h2 { margin: 0; font-size: 20px; }
+.settings h3 { margin: 0 0 6px; font-size: 15px; color: var(--coin); }
+.settings section { display: grid; gap: 8px; justify-items: start; }
+.settings label { display: grid; gap: 4px; font-size: 14px; width: 100%; }
+.settings label.check { display: flex; align-items: center; gap: 8px; }
+.settings input[type=range] { width: 100%; accent-color: var(--coin); }
+.settings input[type=checkbox] { accent-color: var(--coin); }
+.settings .note { margin: 0; }
 </style>
 </head>
 <body class="locked">
@@ -241,6 +255,7 @@ body.locked .proto, body.locked #bridgeChip, body.locked #scanStatus, body.locke
       <span class="proto">Prototype · sample data</span>
       <button id="connectGmail" type="button" class="ghost" style="font-size:12px;padding:3px 10px;">Connect Gmail</button>
       <span id="scanStatus" hidden style="font-family:var(--display);font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--mist);">Scanning receipts…</span>
+      <button id="openSettings" type="button" class="ghost" style="font-size:12px;padding:3px 10px;" aria-haspopup="dialog">Settings</button>
       <span id="bridgeChip" role="status" hidden style="font-family:var(--display);font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--mist);">Browser: checking…</span>
     </div>
   </header>
@@ -371,6 +386,8 @@ import { createPotionLoader } from './potion-loader.ts';
 import { fetchProfileEmail } from '../pipeline/gmail-profile.ts';
 import { setAdapters } from '../agents/reaper.ts';
 import { redirectUriFor } from '../pipeline/oauth-redirect.ts';
+import { readAuth, saveToken, saveEmail, liveToken, dropToken, clearAuth, buildAuthUrl, shouldTrySilent, markSilentTried, clearSilentTried, isSilentMiss, revokeToken } from '../pipeline/session-auth.ts';
+import { initSettings, forgetAccount } from './settings.ts';
 import { createSimulatedAdapter } from '../agents/adapters/simulated.ts';
 import { createCancelPlayerAdapter } from './cancel-player.ts';
 import { emit, subscribe } from '../agents/event-bus.ts';
@@ -635,7 +652,31 @@ function parseHashParams() {
 }
 
 const hashParams = parseHashParams();
-const oauthToken = hashParams.get('access_token');
+// Sign-in lasts until Sign out (session-auth.ts): a token Google just sent is saved; a saved one is reused
+// until it expires, then a silent re-auth runs below. ?demo never uses a saved token.
+const authNow = Date.now();
+const hashToken = hashParams.get('access_token');
+if (hashToken) {
+  saveToken(localStorage, hashToken, Number(hashParams.get('expires_in')) || null, authNow);
+  if (hashParams.get('state')) saveEmail(localStorage, hashParams.get('state'));
+  clearSilentTried(sessionStorage);
+}
+let savedAuth = readAuth(localStorage);
+if (savedAuth?.token && !liveToken(savedAuth, authNow)) { dropToken(localStorage); savedAuth = readAuth(localStorage); }
+const wantsDemo = new URLSearchParams(location.search).has('demo');
+const oauthToken = hashToken || (wantsDemo ? null : liveToken(savedAuth, authNow));
+let currentEmail = oauthToken ? (savedAuth?.email ?? null) : null;
+
+initSettings(document.getElementById('openSettings'), {
+  getEmail: () => currentEmail,
+  onSignOut: async () => {
+    const t = readAuth(localStorage)?.token;
+    if (t) await revokeToken(t);
+    clearAuth(localStorage, sessionStorage);
+    forgetAccount(localStorage);
+    sessionStorage.removeItem('grim_simulate');
+  },
+});
 
 if (oauthToken) {
   document.body.classList.remove('locked'); // signed in: open the crypt
@@ -668,11 +709,14 @@ if (oauthToken) {
 
   // Resolve the account email: OAuth state if present, else the email-entry step
   // (suggested from Gmail's profile call). Never logged or stored.
-  const accountEmailP = hashParams.get('state')
-    ? Promise.resolve(hashParams.get('state'))
+  const knownEmail = hashParams.get('state') || savedAuth?.email;
+  const accountEmailP = knownEmail
+    ? Promise.resolve(knownEmail)
     : fetchProfileEmail(oauthToken).then((suggested) => showEmailEntry({ suggested }));
 
   accountEmailP.then((accountEmail) => {
+    currentEmail = accountEmail;
+    saveEmail(localStorage, accountEmail);
     const loader = createPotionLoader(document.getElementById('stageWrap').parentElement.insertBefore(
       document.createElement('div'), document.getElementById('stageWrap')));
     // Say what happened. Never claim success on a failed or empty scan.
@@ -691,6 +735,7 @@ if (oauthToken) {
           : code === '403' ? 'Gmail API is off, or this account is not a test user.'
           : code === '429' ? 'Gmail rate limit. Try again soon.'
           : 'Scan failed.';
+        if (code === '401') dropToken(localStorage); // dead token: the next load re-auths silently
         loader.fail(hint);
         if (scanStatus) { scanStatus.hidden = false; scanStatus.textContent = hint; }
         const connect = document.getElementById('connectGmail');
@@ -719,12 +764,7 @@ if (oauthToken) {
           return;
         }
         if (qs.has('simulate')) sessionStorage.setItem('grim_simulate', '1');
-        const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
-        url.searchParams.set('client_id', clientId);
-        url.searchParams.set('redirect_uri', redirectUriFor(location));
-        url.searchParams.set('response_type', 'token');
-        url.searchParams.set('scope', 'https://www.googleapis.com/auth/gmail.readonly');
-        location.href = url.toString();
+        location.href = buildAuthUrl({ clientId, redirectUri: redirectUriFor(location), loginHint: savedAuth?.email });
       },
       // onDeny: do nothing
       () => {},
@@ -756,11 +796,23 @@ if (oauthToken) {
   } else {
     // ── Locked: nothing but the sign-in card until the user connects Gmail. ────
     const gate = document.getElementById('loginGate');
+    const gateMsg = document.getElementById('gateMsg');
     gate.hidden = false;
     document.getElementById('gateConnect').addEventListener('click', signIn);
-    if (hashParams.get('error')) {
-      document.getElementById('gateMsg').textContent = 'Sign-in did not finish. Press Connect Gmail to try again.';
+    const authError = hashParams.get('error');
+    if (authError) {
+      // A silent re-auth that needs a click is not a failure: just ask the user to connect.
+      gateMsg.textContent = isSilentMiss(authError)
+        ? 'Your sign-in ran out. Press Connect Gmail to continue.'
+        : 'Sign-in did not finish. Press Connect Gmail to try again.';
       history.replaceState(null, '', location.pathname + location.search);
+    } else if (window.GRIM_CLIENT_ID && shouldTrySilent(savedAuth, sessionStorage, authNow)) {
+      // Signed in before and never signed out, but the token expired: ask Google with no screen.
+      // One try per tab (markSilentTried), so this can never loop.
+      markSilentTried(sessionStorage);
+      if (qs.has('simulate')) sessionStorage.setItem('grim_simulate', '1');
+      gateMsg.textContent = 'Signing you back in…';
+      location.replace(buildAuthUrl({ clientId: window.GRIM_CLIENT_ID, redirectUri: redirectUriFor(location), silent: true, loginHint: savedAuth?.email }));
     }
   }
 }
