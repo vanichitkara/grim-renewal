@@ -4,7 +4,7 @@
  */
 import type { Assessment } from '../savings/assess.ts';
 
-export type StatusWord = 'Found' | 'Cancel started' | 'Waiting to verify' | 'Likely cancelled' | 'Verified' | 'Came back';
+export type StatusWord = 'Found' | 'Cancel started' | 'Cancel failed' | 'Waiting to verify' | 'Likely cancelled' | 'Verified' | 'Came back';
 /** What the Reaper (the event bus) said about this subscription. */
 export type ReaperState = 'none' | 'started' | 'done' | 'failed' | 'came_back';
 
@@ -21,7 +21,7 @@ export function statusFor(input: { reaper: ReaperState; assessment: Assessment }
   if (a.level === 'confirmed') return { word: 'Waiting to verify', detail: a.display };
   if (reaper === 'done') return { word: 'Waiting to verify', detail: 'The Reaper finished. Waiting for a billing cycle with no charge.' };
   if (reaper === 'started') return { word: 'Cancel started', detail: 'The Reaper is working on it.' };
-  if (reaper === 'failed') return { word: 'Cancel started', detail: 'The Reaper could not finish. Use the Cancel kit.' };
+  if (reaper === 'failed') return { word: 'Cancel failed', detail: 'The Reaper could not finish. Use the Cancel kit.' };
   if (a.level === 'likely' || a.level === 'quiet') return { word: 'Likely cancelled', detail: a.display };
   return { word: 'Found', detail: '' };
 }

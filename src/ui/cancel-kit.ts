@@ -26,9 +26,11 @@ export interface KitDeps {
   submitOutcome: (o: { merchantKey: string; method: MethodKind; worked: boolean; consented: boolean }) => Promise<boolean>;
   saveClaim: (id: string, iso: string) => void;
   today: () => string;
+  /** When set, the share box is off and this says why (demo: fake companies must never reach the shared list). */
+  shareDisabledReason?: string;
 }
 
-const defaultDeps: KitDeps = {
+export const defaultDeps: KitDeps = {
   getTips: realGetTips,
   submitOutcome: realSubmit,
   saveClaim: (id, iso) => realSaveClaim(id, iso),
@@ -294,12 +296,13 @@ export async function openCancelKit(input: KitInput, deps: KitDeps = defaultDeps
     const cb = el('input'); cb.type = 'checkbox'; cb.id = 'kit-share'; cb.checked = false;
     share.append(cb, ` ${SHARE_TEXT}`);
     if (!key) { cb.disabled = true; share.append(el('span', 'note', ' (We could not find this company\'s website name, so there is nothing to share.)')); }
+    else if (deps.shareDisabledReason) { cb.disabled = true; share.append(el('span', 'note', ` (${deps.shareDisabledReason})`)); }
     const send = el('button', '', 'Done'); send.type = 'button'; send.id = 'kit-whatworked-done';
     send.addEventListener('click', async () => {
       const method = (fs.querySelector<HTMLInputElement>('input[name="kit-method"]:checked')?.value ?? 'other') as MethodKind;
       const ok = fs.querySelector<HTMLInputElement>('input[name="kit-worked"]:checked')?.value === 'yes';
       send.disabled = true;
-      const sent = key ? await deps.submitOutcome({ merchantKey: key, method, worked: ok, consented: cb.checked }) : false;
+      const sent = key && !deps.shareDisabledReason ? await deps.submitOutcome({ merchantKey: key, method, worked: ok, consented: cb.checked }) : false;
       fs.replaceChildren(el('p', 'kit-ok', cb.checked ? (sent ? 'Thank you. Your answer was shared anonymously.' : 'Could not share it right now. Nothing else was sent.') : 'Done. Nothing was shared.'));
       live.textContent = fs.textContent ?? '';
       const okEl = fs.querySelector<HTMLElement>('.kit-ok');

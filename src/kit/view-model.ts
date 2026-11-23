@@ -35,7 +35,7 @@ export interface HeaderModel {
 }
 
 const plural = (n: number, one: string, many: string): string => `${n} ${n === 1 ? one : many}`;
-const stillPays = (s: Status): boolean => s.word === 'Found' || s.word === 'Cancel started' || s.word === 'Came back';
+const stillPays = (s: Status): boolean => s.word === 'Found' || s.word === 'Cancel started' || s.word === 'Cancel failed' || s.word === 'Came back';
 
 export function headerModel(rows: readonly Row[], trials: readonly { sub: Subscription; days: number }[]): HeaderModel {
   const forgotten = rows.filter((r) => stillPays(r.status) && r.sub.forgottenScore >= FORGOTTEN_AT);

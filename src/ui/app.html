@@ -252,7 +252,7 @@ body.locked .proto, body.locked #bridgeChip, body.locked #scanStatus, body.locke
       <p class="tagline">Make sure the dead stay dead. Every forgotten subscription is a zombie. The Reaper goes knocking — and waits for the result before swinging.</p>
     </div>
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-      <span class="proto">Prototype · sample data</span>
+      <span class="proto">Demo · sample data</span>
       <button id="connectGmail" type="button" class="ghost" style="font-size:12px;padding:3px 10px;">Connect Gmail</button>
       <span id="scanStatus" hidden style="font-family:var(--display);font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--mist);">Scanning receipts…</span>
       <button id="openSettings" type="button" class="ghost" style="font-size:12px;padding:3px 10px;" aria-haspopup="dialog">Settings</button>
@@ -349,7 +349,7 @@ body.locked .proto, body.locked #bridgeChip, body.locked #scanStatus, body.locke
     </div>
     <div class="cards trials" id="trialCards" style="margin-top:12px"></div>
   </section>
-  <div class="btnrow"><button id="raiseRevenant" type="button" class="ghost" hidden>Debug: a cancelled charge comes back</button>
+  <div class="btnrow"><button id="raiseRevenant" type="button" class="ghost" hidden>Show a cancelled charge coming back</button>
     <button id="bridgeTest" type="button" class="ghost" hidden>Test the browser bridge</button></div>
   <p id="graveyardLive" class="sr-only" aria-live="polite" aria-atomic="true"></p>
 
@@ -368,7 +368,7 @@ body.locked .proto, body.locked #bridgeChip, body.locked #scanStatus, body.locke
     <div class="state">State machine: <b id="stateName">idle</b> <span id="stateSub"></span></div>
   </details>
 
-  <p class="note">Prototype. Pixel art is original and drawn by script. In demo mode the subscriptions and cancellations are made up; the animation waits for the result before choosing kill or retreat. Savings that count are the ones shown at the top: avoided charges are only counted after a receipt gap or a cancellation you told us about.</p>
+  <p class="note">All pixel art is original and drawn by script. In the demo, the subscriptions and cancels are made up. The animation waits for the result before choosing kill or retreat. Savings that count are the ones shown at the top: avoided charges are only counted after a receipt gap or a cancellation you told us about.</p>
 </div>
 
 <!-- aria-live region for screen readers -->
@@ -773,7 +773,7 @@ if (oauthToken) {
 
   if (qs.has('demo')) {
     // ── Demo mode: fake subscriptions, no sign-in. Only with ?demo. ────────────
-    // TODO(remove-demo): hide this path from public view before launch (docs/week-plan.md).
+    // Kept on purpose for judges: Google's testing mode lets only listed test users sign in.
     document.body.classList.remove('locked');
     setCancelHandler(fakeCancel);
     // ?demo&many adds six more so the mansion needs a second page and the List has real length.

@@ -112,6 +112,11 @@ describe('statusFor', () => {
     expect(statusFor({ reaper: 'none', assessment: A({ level: 'quiet' }) }).word).toBe('Likely cancelled');
     expect(statusFor({ reaper: 'came_back', assessment: A({}) }).word).toBe('Came back');
   });
+  it('says a failed Reaper cancel failed, and points to the kit', () => {
+    const st = statusFor({ reaper: 'failed', assessment: A({}) });
+    expect(st.word).toBe('Cancel failed');
+    expect(st.detail).toMatch(/Cancel kit/);
+  });
 });
 
 describe('header and list model', () => {

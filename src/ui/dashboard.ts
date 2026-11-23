@@ -12,7 +12,8 @@ import { statusFor, type ReaperState, type Status } from '../kit/status.ts';
 import { headerModel, listRows, type Row } from '../kit/view-model.ts';
 import { makeIcs } from '../kit/ics.ts';
 import { loadCelebrated, markCelebrated } from '../kit/last-scan.ts';
-import { openCancelKit } from './cancel-kit.ts';
+import { openCancelKit, defaultDeps } from './cancel-kit.ts';
+import type { KitDeps } from './cancel-kit.ts';
 
 export interface TrialRow { sub: Subscription; days: number; status: string }
 
@@ -38,6 +39,7 @@ export function sceneLabel(st: { word: string; detail?: string | undefined }): s
     case 'Waiting to verify': return 'Waiting to verify';
     case 'Came back': return 'Came back: charged again';
     case 'Cancel started': return null; // the Reaper is acting: the scene's own words are more precise
+    case 'Cancel failed': return 'Cancel failed: use the kit';
     default: return st.word;
   }
 }
@@ -61,7 +63,17 @@ export function createDashboard(opts: DashboardOpts = {}) {
   let rows: Row[] = [];
   let lastListSig = '';
 
-  const claims = (): Record<string, string> => ({ ...(opts.extraClaims ?? {}), ...loadClaims() });
+  // Demo (remember: false) keeps "I cancelled it" in memory only, so every demo run starts fresh.
+  const sessionClaims: Record<string, string> = {};
+  const claims = (): Record<string, string> => ({ ...(opts.extraClaims ?? {}), ...(opts.remember === false ? {} : loadClaims()), ...sessionClaims });
+  const kitDeps: KitDeps = opts.remember === false
+    ? {
+        ...defaultDeps,
+        saveClaim: (id, iso) => { sessionClaims[id] = iso; },
+        submitOutcome: async () => false, // never post demo data to the shared tips list
+        shareDisabledReason: 'Sharing is off in the demo, so made-up companies never reach the shared list.',
+      }
+    : defaultDeps;
 
   function compute(): void {
     const c = claims();
@@ -193,7 +205,7 @@ export function createDashboard(opts: DashboardOpts = {}) {
     void openCancelKit({
       sub, status: row.status, assessment: row.assessment, claimedOn,
       onClaimed: () => { sweep.delete(id); refresh(); return statusOf(id); },
-    });
+    }, kitDeps);
   }
 
   function setView(v: 'scene' | 'list', persist = false): void {
