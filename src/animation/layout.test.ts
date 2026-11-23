@@ -107,6 +107,12 @@ describe('slot positions', () => {
     expect(upper.reaperX).toBeLessThan(upper.cx);
   });
 
+  it('leaves empty wall between the resting reaper and the first door', () => {
+    // The reaper rests at x 20 (hallway START_X). The first door's left edge must sit well past him.
+    expect(slotPos(0).cx - DOOR_W / 2).toBeGreaterThanOrEqual(20 + 60);
+    expect(slotPos(PER_PAGE - 1).cx + DOOR_W / 2).toBeLessThanOrEqual(CANVAS_W - 20);
+  });
+
   it('torches sit between columns', () => {
     const t = torchXs();
     expect(t).toHaveLength(COLS);

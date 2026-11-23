@@ -47,7 +47,9 @@ export interface SlotPos {
   hitY: number;
 }
 
-const SPACING = CANVAS_W / COLS;
+/** Empty wall on the left, where the reaper rests between jobs. Keeps the first door away from him. */
+export const LEFT_MARGIN = 60;
+const SPACING = (CANVAS_W - LEFT_MARGIN) / COLS;
 
 export function pageCount(total: number): number {
   return Math.max(1, Math.ceil(Math.max(0, total) / PER_PAGE));
@@ -74,7 +76,7 @@ export function slotPos(index: number): SlotPos {
   const local = ((index % PER_PAGE) + PER_PAGE) % PER_PAGE;
   const col = Math.floor(local / 2);
   const floor: Floor = local % 2 === 0 ? 'ground' : 'upper';
-  const cx = Math.round(SPACING * (col + 0.5));
+  const cx = Math.round(LEFT_MARGIN + SPACING * (col + 0.5));
   const feetY = floor === 'ground' ? FLOOR : UPPER_FLOOR;
   return {
     index, page: pageOf(index), local, col, floor, cx,
@@ -86,9 +88,9 @@ export function slotPos(index: number): SlotPos {
   };
 }
 
-/** X positions of the wall torches between columns. */
+/** X positions of the wall torches: one at the left margin, then one between each pair of columns. */
 export function torchXs(): number[] {
-  return Array.from({ length: COLS }, (_, c) => Math.round(SPACING * (c + 1)));
+  return Array.from({ length: COLS }, (_, c) => Math.round(LEFT_MARGIN + SPACING * c));
 }
 
 export interface PageInfo {
