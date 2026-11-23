@@ -28,7 +28,7 @@ Ship a demo-ready app for the Costume Contest. Judges see:
 
 - [ ] Set up Google Cloud project, enable Gmail API, configure OAuth consent (testing mode)
 - [ ] Seed the demo Gmail account with fake receipts (5+ merchants, mix of monthly/annual, one phone-only)
-- [ ] Implement `src/pipeline/parse-receipt.ts` (done — spec in `.kiro/specs/receipt-parser.md`)
+- [ ] Implement `src/pipeline/parse-receipt.ts` (done — spec in `.kiro/specs/receipt-parser/`)
 - [ ] Implement `src/pipeline/gmail-scout.ts` (Gmail MCP, read-only, query-level filter)
 - [ ] Implement `src/agents/coroner.ts` (done — scores from activity signals)
 - [ ] Wire Scout → Coroner → event bus → animation
@@ -181,7 +181,7 @@ Final frame: the hallway, four tombstones, $995.64/yr saved.
 
 - **Landing page first.** `src/ui/index.html` is the landing page and is what the live site opens. The app is `src/ui/app.html`. A Google sign-in return that lands on the site root is handed to `app.html` by a small script in the landing page, so the redirect URI registered in Google Cloud stays the site root.
 - **Sign-in gate.** `app.html` starts locked (`<body class="locked">`). Only a returning sign-in token or `?demo` unlocks it. This is a UI gate, not a server check: the app has no server and holds no data.
-- [ ] **REMOVE THE DEMO FROM THE LANDING PAGE before launch.** Demo is fine for now. Search for `TODO(remove-demo)`: three links in `src/ui/index.html` (nav "Demo", hero "Try the demo", footer link), one test line in `src/ui/landing.test.ts`, and the demo branch in `src/ui/app.html`. Decide at that time whether the `?demo` path itself stays for judges or goes.
+- [x] **Demo stays (decided 2026-11-23).** Judges may not be Google test users (testing mode allows only listed users), so `?demo` and a clear "Try the demo · no sign-in" button stay on the landing page. The demo never saves claims and never shares tips.
 - Hosting: GitHub Pages stays. Vercel's free Hobby plan is for personal, non-commercial use only; a hackathon project fits, a paid product would not.
 
 - [ ] **Hosted browser for real cancels (decide later).** The local bridge only works on the
