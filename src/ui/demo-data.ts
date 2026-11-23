@@ -1,5 +1,5 @@
 /**
- * Demo shim for prototype mode.
+ * Demo shim for demo mode.
  *
  * Provides a typed SUBS array (Subscription records) and a fakeCancel()
  * that emits AgentEvents onto the event bus to simulate the backend.

@@ -22,7 +22,9 @@ export function check(path, text) {
     if (!skip.includes('scope') && /googleapis\.com\/auth\/(?!gmail\.readonly\b)[\w.]+|mail\.google\.com\/?['"]/.test(line)) {
       problems.push(`${at}: Gmail scope other than gmail.readonly. privacy.md allows gmail.readonly only.`);
     }
-    if (/console\.(log|info|debug|warn|error)\([^)]*\b(token|access_token|accessToken|body|snippet|subject|payload|raw)\b/i.test(line)) {
+    // Look at code, not words inside quotes: console.warn('token expired') is fine, console.log(token) is not.
+    const code = line.replace(/(['"`])(?:\\.|(?!\1).)*\1/g, '""');
+    if (/console\.(log|info|debug|warn|error)\([^)]*\b(token|access_token|accessToken|body|snippet|subject|payload|raw)\b/i.test(code)) {
       problems.push(`${at}: logs a token or message content. privacy.md: never log bodies, subjects or tokens.`);
     }
     if (!skip.includes('store') && /(localStorage|sessionStorage)\.setItem\([^)]*\b(token|access_token|accessToken)\b/i.test(line) && !/bridge/i.test(line)) {

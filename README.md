@@ -55,7 +55,7 @@ A Kiro Crew team lead planned each round, handed big pieces to worker sessions, 
 - **It refused to call a guess "verified".** Kiro researched how other apps count savings and pushed for evidence levels: a missing receipt is "No charge seen", and only a cancellation plus a quiet billing cycle is "Verified".
 - **It debugged an empty inbox.** A real Gmail scan found nothing. Kiro traced it to Gmail's `labelIds` meaning AND, not OR, and fixed the query.
 - **It took the least-privilege path when a deploy failed.** Cloud Run's build hit PERMISSION_DENIED. Instead of widening the default account, Kiro made a dedicated build account with two roles.
-- **It wrote its own guardrails.** The hooks above were written by Kiro to enforce the steering it was given, and tested against known-bad files before they were turned on.
+- **It wrote its own guardrails.** Kiro wrote the hooks above to enforce the steering it was given. `src/tooling/hooks.test.ts` feeds them known-bad lines and checks they are caught, and checks every source file passes today. A reviewer session then found that test-on-save was silently running zero tests, and it was fixed.
 
 ## Run the pieces
 
@@ -92,43 +92,43 @@ npm test           # receipt parser + property-based tests
 npm run typecheck  # TypeScript strict check
 ```
 
-Open `public/reaper.html` directly in a browser for the standalone animation prototype.
 
 ## Project Structure
 
 ```
 .kiro/
-  specs/
-    subscription-discovery.md   Scout agent: Gmail → Subscription records
-    forgotten-score.md          Coroner agent: activity signals → forgottenScore
-    cancellation-state-machine.md  Reaper agent: state transitions
-    receipt-parser.md           Pure function spec + property-based test requirements
-    kiro-crew-agents.md         Scout + Coroner + Reaper conductor pattern
+  specs/<feature>/              requirements.md, design.md, tasks.md for 10 features (see .kiro/specs/README.md)
   steering/
+    privacy.md                  Gmail scope, storage, consent text, cancellation rules
     animation.md                Canvas rules, palette, easing, accessibility
-    privacy.md                  Gmail scope, storage, consent UI, demo rules
+  hooks/                        privacy-guard, palette-guard, test-on-save, spec-sync
+
+scripts/
+  hooks/                        The scripts the hooks run (tested in src/tooling/hooks.test.ts)
+  deploy-tips-gcp.sh            Deploy the tips server to Cloud Run
 
 src/
   types.ts                      Core domain types (Subscription, AgentEvent, …)
-  animation/
-    ease.ts                     Named easing functions (use only these)
-    tween.ts                    Interruptible tween engine
-  pipeline/
-    parse-receipt.ts            Receipt parser — pure function
-    parse-receipt.test.ts       Unit + property-based tests (vitest + fast-check)
-  agents/
-    coroner.ts                  Forgotten score computation
-    event-bus.ts                Shared in-memory event bus
-  ui/                           index.html = landing page, app.html = the app (sign-in gate), components
+  animation/                    Canvas mansion, graveyard, sprites, particles, sound, named easings
+  pipeline/                     Gmail scout, receipt parser, sign-in (session-auth.ts), bridge client
+  agents/                       Coroner, Reaper, event bus, cancel adapters
+  savings/                      Evidence levels and verified savings
+  kit/                          Status words, Cancel kit model, trial reminder (.ics)
+  community/                    Shared tips client and Firestore store
+  state/                        "I cancelled it" claims
+  ui/                           index.html = landing page, app.html = the app, Settings, Cancel kit, dialogs
+  tooling/                      Tests for the Kiro hook scripts
+
+server/                         Tips API (Cloud Run) and the local Playwright bridge
 
 public/
-  reaper.html                   Standalone animation prototype (Grim Renewal)
-  assets/
-    sprites/                    Drop pixel-art sprite sheets here
-    sounds/                     Royalty-free sound effects here
+  mock/                         Fake merchant sites for the Cancellation Player
+  data/                         Starter cancel-method list
 
 docs/
-  week-plan.md                  4-week build plan + demo video script
+  video-script.md               3-minute demo video, shot by shot
+  week-plan.md                  Build plan and backlog
+  specs/                        Build-wave plan and review reports
 ```
 
 ## Browser cancels (optional, on your own computer)

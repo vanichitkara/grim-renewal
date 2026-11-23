@@ -31,6 +31,8 @@ Use only the named easings from `src/animation/ease.ts`:
 - Every animation step must be interruptible (tween can be cancelled mid-flight).
 
 ## Color Palette (never hardcode outside these)
+Sprite shading drawn before the palette guard hook existed uses extra shades of these colors. New code uses only the
+nine below; `.kiro/hooks/palette-guard.json` checks every newly added line.
 ```
 --night:  #120e1c   (background)
 --crypt:  #1c162b   (card surfaces)

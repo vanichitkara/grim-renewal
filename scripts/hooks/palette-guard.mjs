@@ -16,6 +16,8 @@ export function check(path, addedLines) {
     for (const hex of text.match(/#[0-9a-fA-F]{6}\b/g) ?? []) {
       if (!PALETTE.includes(hex.toLowerCase())) problems.push(`${at}: colour ${hex} is not in the animation.md palette (${PALETTE.join(' ')}).`);
     }
+    for (const hex of text.match(/#[0-9a-fA-F]{3}(?![0-9a-fA-F])/g) ?? []) problems.push(`${at}: short colour ${hex}. Use a palette colour (${PALETTE.join(' ')}).`);
+    if (/\b(rgba?|hsla?)\(\s*\d/.test(text)) problems.push(`${at}: rgb()/hsl() colour. Use a palette colour, or rgba of one (add it to animation.md first).`);
     if (/cubic-bezier\(/.test(text) && !path.endsWith('ease.ts')) problems.push(`${at}: inline cubic-bezier. Use a named easing from src/animation/ease.ts.`);
     if (/from\s+['"](pixi\.js|phaser|@pixi\/)/.test(text)) problems.push(`${at}: game engine import. animation.md: Canvas 2D only unless approved.`);
     if (/imageSmoothingEnabled\s*=\s*true/.test(text)) problems.push(`${at}: smoothing on. animation.md: never smooth pixel art.`);

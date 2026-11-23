@@ -12,7 +12,7 @@ Ship a demo-ready app for the Costume Contest. Judges see:
 ## Week 1 — Animation First
 **Goal:** A working hallway with fake data that looks good enough to keep.
 
-- [ ] Port `reaper.html` → `src/ui/app.html` (done — see `public/reaper.html`)
+- [x] Port `reaper.html` → `src/ui/app.html` (the old standalone page was removed)
 - [ ] Extract animation into `src/animation/` (tween, ease, draw functions)
 - [ ] Add the `src/types.ts` event bus hook (animation waits on `AgentEvent`)
 - [ ] Add a `?debug` query param to show/hide the tuning panel ✓
