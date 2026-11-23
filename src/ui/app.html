@@ -20,7 +20,10 @@
   --rot:    #8fc25a;
   --blood:  #e0574f;
   --spirit: #c99bff;
-  --display: "Pixelify Sans", "Courier New", monospace;
+  /* Readability first: Atkinson Hyperlegible keeps look-alike letters apart (I l 1, O 0, rn m).
+     The pixel face is kept for the logo only (--brand). */
+  --brand:   "Pixelify Sans", "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --display: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
   --body:    "Atkinson Hyperlegible", system-ui, sans-serif;
   color-scheme: dark;
 }
@@ -47,7 +50,7 @@ body {
   gap: 20px;
 }
 header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 20px; }
-h1 { font-family: var(--display); font-weight: 700; font-size: clamp(26px, 4vw, 38px); margin: 0; letter-spacing: 0.5px; text-wrap: balance; }
+h1 { font-family: var(--brand); font-weight: 700; font-size: clamp(26px, 4vw, 38px); margin: 0; letter-spacing: 0.5px; text-wrap: balance; }
 .tagline { color: var(--mist); margin: 0; max-width: 60ch; }
 .proto { font-family: var(--display); font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--coin); border: 1px solid var(--stone); padding: 3px 8px; border-radius: 3px; white-space: nowrap; }
 
@@ -267,7 +270,7 @@ body.locked .proto, body.locked #bridgeChip, body.locked #scanStatus, body.locke
         <button id="showScene" type="button" aria-pressed="true">Scene</button>
         <button id="showList" type="button" aria-pressed="false">List</button>
       </div>
-      <div class="seg" id="sceneSeg" role="group" aria-label="Mansion or graveyard">
+      <div class="seg" id="sceneSeg" hidden role="group" aria-label="Mansion or graveyard">
         <button id="viewHouse" type="button" aria-pressed="true">Hallway</button>
         <button id="viewYard" type="button" aria-pressed="false">Graveyard</button>
       </div>
@@ -454,6 +457,13 @@ function renderGraveyard(trials = lastTrials) {
   lastTrials = trials;
   const box = document.getElementById('trialCards');
   document.getElementById('graveyard').hidden = trials.length === 0;
+  // No trials, no graveyard: hide the Mansion | Graveyard switch too, and leave the yard if it was showing.
+  const seg = document.getElementById('sceneSeg');
+  const noYard = trials.length === 0;
+  if (seg.hidden !== noYard) {
+    seg.hidden = noYard;
+    if (noYard && document.getElementById('viewYard').getAttribute('aria-pressed') === 'true') setView('house');
+  }
   document.getElementById('buryAll').disabled = !trials.some(t => t.status === 'idle');
   box.replaceChildren(...trials.map(({ sub, days, status }) => {
     const c = document.createElement('article');
