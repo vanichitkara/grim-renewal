@@ -1,0 +1,13 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Test on save",
+      "description": "After a TypeScript file is saved, run only the unit tests that import it (vitest related). A failure goes back to the agent.",
+      "trigger": "PostFileSave",
+      "matcher": "(src|server)/.*\\.(ts|mts)$",
+      "action": { "type": "command", "command": "node scripts/hooks/related-tests.mjs" },
+      "timeout": 120
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Spec sync",
+      "description": "When a spec's tasks.md is saved, make the agent check each ticked task against the code, so the spec never claims work that is not built.",
+      "trigger": "PostFileSave",
+      "matcher": "\\.kiro/specs/[^/]+/tasks\\.md$",
+      "action": {
+        "type": "agent",
+        "prompt": "A spec task list was just saved. For every task marked [x], confirm the files and functions it names exist in src/ and that a test covers it. Untick any task that is not really built, and update design.md if a file or function name changed. Do not edit code to make a task true. Report what you changed in one short list."
+      }
+    }
+  ]
+}
