@@ -35,31 +35,32 @@ export function drawTorch(
   ctx: CanvasRenderingContext2D,
   x: number,
   t: number,
+  floor = FLOOR,
 ): void {
   const f =
     Math.sin(t * 13 + x) * 0.5 + Math.sin(t * 7.3 + x * 2) * 0.5;
 
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
-  const g = ctx.createRadialGradient(x, FLOOR - 54, 2, x, FLOOR - 54, 38);
+  const g = ctx.createRadialGradient(x, floor - 54, 2, x, floor - 54, 38);
   g.addColorStop(0, `rgba(255,160,70,${0.22 + 0.05 * f})`);
   g.addColorStop(1, 'rgba(255,160,70,0)');
   ctx.fillStyle = g;
-  ctx.fillRect(x - 40, FLOOR - 94, 80, 80);
+  ctx.fillRect(x - 40, floor - 94, 80, 80);
   ctx.restore();
 
   // Bracket
   ctx.fillStyle = '#5a4630';
-  ctx.fillRect(x - 2, FLOOR - 48, 5, 2);
+  ctx.fillRect(x - 2, floor - 48, 5, 2);
   ctx.fillStyle = '#4a3826';
-  ctx.fillRect(x - 1, FLOOR - 50, 3, 6);
+  ctx.fillRect(x - 1, floor - 50, 3, 6);
 
   // Flame
   const fy = Math.round(f);
   ctx.fillStyle = '#ff9a3c';
-  ctx.fillRect(x - 1, FLOOR - 56 - fy, 3, 6 + fy);
+  ctx.fillRect(x - 1, floor - 56 - fy, 3, 6 + fy);
   ctx.fillStyle = '#ffe08a';
-  ctx.fillRect(x, FLOOR - 58 - fy, 1, 4);
+  ctx.fillRect(x, floor - 58 - fy, 1, 4);
 }
 
 /**
@@ -73,13 +74,15 @@ export function drawDoor(
   slot: DoorSlotState,
   t: number,
   drawZombieCallback: (cx: number, slot: DoorSlotState, t: number) => void,
+  /** Y of the floor this door stands on (the ground line, or the upper landing). */
+  floor = FLOOR,
 ): void {
   const { door, z, tomb } = slot;
   const sh = door.shake > 0.02
     ? Math.round(Math.sin(t * 90) * 2 * door.shake)
     : 0;
   const x0 = cx - 17 + sh;
-  const y0 = FLOOR - 58;
+  const y0 = floor - 58;
 
   const frameS = getSprite('door_frame');
   const panelS = getSprite('door_panel');
@@ -138,7 +141,7 @@ export function drawDoor(
   if (tomb > 0) {
     const h = Math.round(16 * tomb);
     const tx = cx - 7;
-    const ty = FLOOR - h;
+    const ty = floor - h;
     if (tombS) {
       // Rises out of the floor: top h rows, bottom clipped at the floor line
       ctx.imageSmoothingEnabled = false;

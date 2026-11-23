@@ -17,8 +17,10 @@ export interface Particle {
   max: number;
   size: number;
   color: string;
-  kind: 'dust' | 'coin' | 'soul' | 'dirt' | 'shard' | 'puff';
+  kind: 'dust' | 'coin' | 'soul' | 'dirt' | 'puff';
   bounced?: boolean;
+  /** Y where a coin or dirt bounces (default: the ground line). Upper-landing coins land on the landing. */
+  floorY?: number;
   seed?: number;
 }
 
@@ -51,6 +53,7 @@ export function spawnCoins(
   cx: number,
   reduceMotion: boolean,
   y = FLOOR - 16,
+  floorY = FLOOR,
 ): void {
   const n = reduceMotion ? 4 : 10;
   for (let k = 0; k < n; k++) {
@@ -66,6 +69,7 @@ export function spawnCoins(
       color: '#f2b84b',
       kind: 'coin',
       bounced: false,
+      floorY,
     });
   }
 }
@@ -106,25 +110,6 @@ export function spawnSoul(particles: Particle[], cx: number, y = FLOOR - 30): vo
   });
 }
 
-/** Glass shards from a smashed window. Skipped under reduced motion (animation.md). */
-export function spawnGlass(particles: Particle[], cx: number, cy: number, reduceMotion: boolean): void {
-  if (reduceMotion) return;
-  for (let k = 0; k < 26; k++) {
-    particles.push({
-      x: cx + (Math.random() - 0.5) * 28,
-      y: cy + (Math.random() - 0.5) * 32,
-      vx: (Math.random() - 0.5) * 120,
-      vy: -30 - Math.random() * 60,
-      g: 340,
-      life: 0,
-      max: 0.9 + Math.random() * 0.5,
-      size: Math.random() < 0.35 ? 2 : 1,
-      color: Math.random() < 0.5 ? '#ece6d6' : '#a59cbc',
-      kind: 'shard',
-    });
-  }
-}
-
 /** One smoke puff for the reaper's blink. Skipped under reduced motion. */
 export function spawnPuff(particles: Particle[], x: number, y: number, reduceMotion: boolean): void {
   if (reduceMotion) return;
@@ -139,8 +124,9 @@ export function updateParticles(particles: Particle[], dt: number): void {
     p.vy += p.g * dt;
     p.x += p.vx * dt;
     p.y += p.vy * dt;
-    if ((p.kind === 'coin' || p.kind === 'dirt') && p.y > FLOOR - 2) {
-      p.y = FLOOR - 2;
+    const land = (p.floorY ?? FLOOR) - 2;
+    if ((p.kind === 'coin' || p.kind === 'dirt') && p.y > land) {
+      p.y = land;
       if (!p.bounced) {
         p.vy *= -0.45;
         p.vx *= 0.6;

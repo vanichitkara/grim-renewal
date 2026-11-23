@@ -4,10 +4,11 @@
  */
 
 import { getSprite } from './sprites.ts';
+import { UPPER_FLOOR } from './layout.ts';
 
-/** The mansion front spans x 0..HALL; the world (hallway + archway + yard) is WORLD wide. */
-const HALL = 500;
-const WORLD = 800;
+/** The mansion front is world x 0..HALL; the yard is the next 480 px. The camera shows one of them at a time. */
+const HALL = 480;
+const WORLD = 960;
 const H = 220;
 const FLOOR = 184;
 
@@ -19,7 +20,6 @@ export function paintBg(): HTMLCanvasElement {
 
   paintMansion(b);
   paintYard(b);
-  paintArch(b);
   return bg;
 }
 
@@ -58,13 +58,23 @@ function paintMansion(b: CanvasRenderingContext2D): void {
   b.fillStyle = '#2a2240';
   b.fillRect(0, 24, HALL, 3);
 
-  // Cornice between the floors.
-  b.fillStyle = '#2a2240';
-  b.fillRect(0, 102, HALL, 5);
-  b.fillStyle = '#3a2d52';
-  b.fillRect(0, 102, HALL, 1);
-  b.fillStyle = '#120e1c';
-  b.fillRect(0, 107, HALL, 2);
+  // Upper landing: a stone ledge with a balustrade. The upper doors stand on it.
+  const land = getSprite('landing');
+  if (land) {
+    b.imageSmoothingEnabled = false;
+    for (let x = 0; x < HALL; x += 16) b.drawImage(land.bitmap, x, UPPER_FLOOR - 14);
+  } else {
+    b.fillStyle = '#2a2240';
+    for (let x = 0; x < HALL; x += 16) for (const px of [1, 9]) b.fillRect(x + px, UPPER_FLOOR - 11, 3, 11);
+    b.fillRect(0, UPPER_FLOOR - 14, HALL, 3);
+    b.fillStyle = '#3a3152';
+    b.fillRect(0, UPPER_FLOOR - 14, HALL, 2);
+    b.fillRect(0, UPPER_FLOOR, HALL, 1);
+    b.fillStyle = '#2a2240';
+    b.fillRect(0, UPPER_FLOOR + 1, HALL, 4);
+    b.fillStyle = '#120d1a';
+    b.fillRect(0, UPPER_FLOOR + 5, HALL, 2);
+  }
 
   // Porch: stone steps along the ground line, then the dark ground.
   b.fillStyle = '#271e3a';
@@ -108,19 +118,19 @@ function paintYard(b: CanvasRenderingContext2D): void {
   }
 
   // Moon with glow and craters.
-  const glow = b.createRadialGradient(705, 40, 8, 705, 40, 50);
+  const glow = b.createRadialGradient(860, 40, 8, 860, 40, 50);
   glow.addColorStop(0, 'rgba(233,228,201,0.28)');
   glow.addColorStop(1, 'rgba(233,228,201,0)');
   b.fillStyle = glow;
-  b.fillRect(655, 0, 100, 100);
+  b.fillRect(810, 0, 100, 100);
   b.fillStyle = '#e9e4c9';
   b.beginPath();
-  b.arc(705, 40, 15, 0, Math.PI * 2);
+  b.arc(860, 40, 15, 0, Math.PI * 2);
   b.fill();
   b.fillStyle = 'rgba(120,115,100,0.35)';
-  b.fillRect(699, 34, 4, 3);
-  b.fillRect(709, 43, 3, 3);
-  b.fillRect(703, 47, 2, 2);
+  b.fillRect(854, 34, 4, 3);
+  b.fillRect(864, 43, 3, 3);
+  b.fillRect(858, 47, 2, 2);
 
   // Hills.
   b.fillStyle = '#16132a';
@@ -155,16 +165,4 @@ function paintYard(b: CanvasRenderingContext2D): void {
   for (let x = x0 + 3; x < WORLD; x += 9) {
     b.fillRect(x, FLOOR - 2 + (x % 3), 1, 2);
   }
-}
-
-/** End wall with an archway between hallway and yard, x 498..524. */
-function paintArch(b: CanvasRenderingContext2D): void {
-  b.fillStyle = '#2f2645';
-  b.fillRect(498, 0, 6, FLOOR);
-  b.fillRect(518, 0, 6, FLOOR);
-  b.fillStyle = '#3a2d52';
-  b.fillRect(498, 0, 26, 52);
-  b.fillStyle = '#151129';
-  b.fillRect(498, 52, 6, 2);
-  b.fillRect(518, 52, 6, 2);
 }

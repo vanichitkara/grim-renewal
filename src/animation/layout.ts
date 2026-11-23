@@ -2,31 +2,27 @@
  * Mansion layout and paging. Pure: no canvas, no DOM.
  *
  * The mansion front shows one page of slots at a time. Each column holds a
- * ground-floor door and an upper-floor window. Slot i (0-based, in the order
+ * ground-floor door and an upper-floor door. Slot i (0-based, in the order
  * subscriptions were added) sits on page floor(i / PER_PAGE); inside a page the
- * slots fill column by column: door, window, door, window, ...
+ * slots fill column by column: ground door, upper door, ground door, upper door, ...
  * Page numbers here are 0-based. `pageInfo` returns the 1-based numbers the UI shows.
  */
 
 /** Native canvas width (animation.md: 480x220, never scaled on the element). */
 export const CANVAS_W = 480;
-/** Y of the ground line. */
+/** Y of the ground line (ground-floor feet). */
 export const FLOOR = 184;
-/** Columns per page. Two slots per column (door below, window above). */
+/** Y of the upper landing's top surface (upper-floor feet). */
+export const UPPER_FLOOR = 94;
+/** Columns per page. Two slots per column (ground door below, upper door above). */
 export const COLS = 4;
 export const PER_PAGE = COLS * 2;
 
-/** Door frame sprite is 40x62, resting on FLOOR. */
+/** Door frame sprite is 40x62, resting on its floor. */
 export const DOOR_W = 40;
 export const DOOR_H = 62;
-/** Window frame sprite is 40x50; the glass pane inside it is 32x38 at offset (4, 4). */
-export const WIN_W = 40;
-export const WIN_H = 50;
-export const WIN_TOP = 30;
-export const PANE_W = 32;
-export const PANE_H = 38;
 
-export type SlotKind = 'door' | 'window';
+export type Floor = 'ground' | 'upper';
 
 export interface SlotPos {
   index: number;
@@ -35,12 +31,12 @@ export interface SlotPos {
   /** 0..PER_PAGE-1 position inside the page. */
   local: number;
   col: number;
-  kind: SlotKind;
-  /** Horizontal centre of the door or window. */
+  floor: Floor;
+  /** Horizontal centre of the door. */
   cx: number;
   /** Top of the frame sprite. */
   top: number;
-  /** Y where the zombie's feet stand (door: the floor; window: bottom of the pane). */
+  /** Y where the zombie's feet stand: the ground line or the landing. */
   feetY: number;
   /** Where the reaper stops: x, and how many px above its ground pose it hovers. */
   reaperX: number;
@@ -77,22 +73,16 @@ export function pageSlots(total: number, page: number): number[] {
 export function slotPos(index: number): SlotPos {
   const local = ((index % PER_PAGE) + PER_PAGE) % PER_PAGE;
   const col = Math.floor(local / 2);
-  const kind: SlotKind = local % 2 === 0 ? 'door' : 'window';
+  const floor: Floor = local % 2 === 0 ? 'ground' : 'upper';
   const cx = Math.round(SPACING * (col + 0.5));
-  if (kind === 'door') {
-    return {
-      index, page: pageOf(index), local, col, kind, cx,
-      top: FLOOR - DOOR_H, feetY: FLOOR,
-      reaperX: cx - 40, reaperLift: 0,
-      tagY: FLOOR + 30, hitY: FLOOR - 20,
-    };
-  }
-  const paneBottom = WIN_TOP + 4 + PANE_H;
+  const feetY = floor === 'ground' ? FLOOR : UPPER_FLOOR;
   return {
-    index, page: pageOf(index), local, col, kind, cx,
-    top: WIN_TOP, feetY: paneBottom,
-    reaperX: cx - 44, reaperLift: FLOOR - 2 - (WIN_TOP + WIN_H + 2),
-    tagY: WIN_TOP + WIN_H + 26, hitY: paneBottom - 16,
+    index, page: pageOf(index), local, col, floor, cx,
+    top: feetY - DOOR_H, feetY,
+    reaperX: cx - 40, reaperLift: FLOOR - feetY,
+    // Ground tags sit under the floor line. Upper tags sit between the landing and the door below.
+    tagY: floor === 'ground' ? FLOOR + 30 : FLOOR - DOOR_H,
+    hitY: feetY - 20,
   };
 }
 

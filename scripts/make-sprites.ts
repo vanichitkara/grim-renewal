@@ -188,56 +188,20 @@ const ghost = [
 ].map(fromRows);
 
 
-// ---------- mansion: window frame (pane transparent), glass, broken glass, boards, wall tile, smoke ----------
-// Window frame is 40x50; the glass pane inside it is 32x38 at offset (4,4).
-function windowFrame(): Grid {
-  const g = mk(40, 50);
-  rect(g, 0, 0, 40, 50, 'm');
-  rect(g, 0, 0, 40, 3, 'c'); rect(g, 0, 0, 2, 50, 'c');           // lit top and left edge
-  rect(g, 0, 44, 40, 4, 'c'); rect(g, 0, 48, 40, 2, 'o');          // sill, with a dark underside
-  rect(g, 38, 3, 2, 41, 'k');                                      // shaded right edge
-  rect(g, 3, 3, 34, 40, 'o');                                      // dark ring around the pane
-  rect(g, 4, 4, 32, 38, '.');                                      // the pane: see-through
-  rect(g, 19, 4, 2, 38, 'c'); rect(g, 4, 22, 32, 2, 'c');          // mullions
-  rect(g, 20, 4, 1, 38, 'm'); rect(g, 4, 23, 32, 1, 'm');
-  for (const [x, y] of [[1, 1], [38, 1], [1, 46], [38, 46]] as const) px(g, x, y, 'd'); // studs
-  px(g, 0, 0, '.'); px(g, 39, 0, '.');
-  return g;
-}
-/** Intact glass: a few pale glints, mostly clear. */
-function windowGlass(): Grid {
-  const g = mk(32, 38);
-  for (let i = 0; i < 7; i++) px(g, 3 + i, 4 + i, i % 3 === 0 ? 'b' : 'd');
-  for (let i = 0; i < 4; i++) px(g, 6 + i, 3 + i + 5, 'd');
-  for (let i = 0; i < 6; i++) px(g, 20 + i, 26 + i, i % 2 ? 'd' : 'b');
-  return g;
-}
-/** Smashed glass: jagged teeth left on the edges, the middle is open. */
-function windowBroken(): Grid {
-  const g = mk(32, 38);
-  for (let x = 0; x < 32; x++) {
-    const top = (x * 7 + 3) % 5, bot = (x * 5 + 1) % 4;
-    rect(g, x, 0, 1, top, x % 3 ? 'd' : 'b');
-    rect(g, x, 38 - bot, 1, bot, x % 3 ? 'd' : 'b');
-  }
-  for (let y = 0; y < 38; y++) {
-    const l = (y * 3 + 2) % 4, r = (y * 5 + 2) % 3;
-    rect(g, 0, y, l, 1, y % 3 ? 'd' : 'b');
-    rect(g, 32 - r, y, r, 1, y % 3 ? 'd' : 'b');
-  }
-  return g;
-}
-/** Three boards nailed across the window. */
-function windowBoards(): Grid {
-  const g = mk(32, 38);
-  for (const y0 of [4, 16, 28]) {
-    for (let x = 0; x < 32; x++) {
-      const y = y0 + Math.floor((x - 16) / 9);
-      px(g, x, y, 'N'); rect(g, x, y + 1, 1, 3, 'q'); px(g, x, y + 4, 'Q'); px(g, x, y + 5, 'r');
-      if ((x * 5 + y0) % 11 === 0) px(g, x, y + 2, 'r'); // grain
-    }
-    for (const x of [2, 29]) px(g, x, y0 + Math.floor((x - 16) / 9) + 2, 'l'); // nails
-  }
+// ---------- mansion: upper landing, wall tile, smoke ----------
+/**
+ * 16x22 tile of the upper landing, repeated across the wall. Rows 0-13: a balustrade
+ * (top bar, two posts, see-through between). Rows 14-21: the stone ledge the upper doors stand on.
+ * The ledge top (row 14) is the floor line of the upper floor.
+ */
+function landingTile(): Grid {
+  const g = mk(16, 22);
+  rect(g, 0, 0, 16, 2, 'c'); rect(g, 0, 2, 16, 1, 'm');         // handrail
+  for (const x of [1, 9]) { rect(g, x, 3, 3, 11, 'm'); rect(g, x, 3, 1, 11, 'c'); rect(g, x + 2, 3, 1, 11, 'k'); }
+  rect(g, 0, 14, 16, 1, 'c');                                    // lit top edge
+  rect(g, 0, 15, 16, 4, 'm');
+  for (let x = 0; x < 16; x += 8) rect(g, x + 7, 15, 1, 4, 'k'); // stone joints
+  rect(g, 0, 19, 16, 1, 'k'); rect(g, 0, 20, 16, 2, 'o');       // shaded underside
   return g;
 }
 /** 16x16 brick tile (same look as the old hallway wall). */
@@ -278,10 +242,7 @@ const SPRITES: Record<string, Grid[]> = {
   door_frame: [doorFrame()],
   door_panel: [doorPanel()],
   tombstone: [tombstone],
-  window_frame: [windowFrame()],
-  window_glass: [windowGlass()],
-  window_broken: [windowBroken()],
-  window_boards: [windowBoards()],
+  landing: [landingTile()],
   mansion_wall: [wallTile()],
   smoke: [0, 1, 2, 3].map(smoke),
   coin,

@@ -1,7 +1,8 @@
 /**
  * Mansion orchestrator (file name kept: UI imports it) — owns the rAF loop and the
- * animation state machine. The scene is a haunted mansion front: ground-floor doors
- * and upper-floor windows, 8 slots per page, with the graveyard to the right.
+ * animation state machine. The scene is a haunted mansion front: doors on two floors
+ * (ground, and an upper landing), 8 slots per page. The graveyard is a separate full-frame
+ * scene, shown only when there are trials.
  *
  * Rules (animation.md):
  * - State transitions fire ONLY in response to AgentEvents from the bus.
@@ -19,10 +20,8 @@ import type { TweenHandle } from './tween.ts';
 import { paintBg } from './background.ts';
 import { drawTorch, drawDoor } from './door.ts';
 import type { DoorSlotState } from './door.ts';
-import { drawWindow, newPane, paneRect } from './mansion-window.ts';
-import type { PaneState } from './mansion-window.ts';
 import {
-  FLOOR, PER_PAGE, PANE_H, slotPos, torchXs, pageCount, pageOf, clampPage, pageInfo,
+  FLOOR, UPPER_FLOOR, PER_PAGE, slotPos, torchXs, pageCount, pageOf, clampPage, pageInfo,
   travelKind, glideMs, pace,
 } from './layout.ts';
 import type { PageInfo } from './layout.ts';
@@ -39,7 +38,6 @@ import {
   spawnCoins,
   spawnSoul,
   spawnDirt,
-  spawnGlass,
   spawnPuff,
   updateParticles,
   drawParticles,
@@ -50,8 +48,9 @@ import { sfx, setMuted, isMuted, unlockAudio } from './sound.ts';
 // Canvas constants — 480×220, never scaled on the element itself.
 const W = 480;
 const H = 220;
-const WORLD = 800;
-const GRAVES = [604, 684, 764] as const;
+/** The mansion front is world x 0..HALL, the yard the next 480 px. */
+const HALL = 480;
+const GRAVES = [640, 720, 800] as const;
 const DAY_MS = 86_400_000;
 /** Where the reaper rests between jobs. */
 const START_X = 20;
@@ -82,8 +81,6 @@ interface SubSlot {
   sub: Subscription;
   config: ZombieConfig;
   slot: DoorSlotState;
-  /** Glass and boards (used when the slot is a window). */
-  pane: PaneState;
   queued: boolean;
 }
 
@@ -113,6 +110,8 @@ let gen = 0;
 let pagerEl: HTMLElement | null = null;
 let cam: { s: number; x: number; focus: number | null };
 let view: View = 'house';
+/** True while the camera cuts between the mansion and the yard. */
+let cutting = false;
 /** Simulated days added to the real clock (demo "Advance one day"). Real app: always 0. */
 let dayOffset = 0;
 let extraEaten = 0;
@@ -193,13 +192,12 @@ function makeSlot(sub: Subscription, maxSpent: number): SubSlot {
       tomb: 0,
       status: 'idle',
     },
-    pane: newPane(),
     queued: false,
   };
 }
 
 /**
- * Add a discovered subscription: it gets the next free slot (a door or a window,
+ * Add a discovered subscription: it gets the next free slot (a ground or upper door,
  * 8 per page). Idempotent per id.
  */
 export function addSubscription(sub: Subscription, config?: ZombieConfig): void {
@@ -245,11 +243,6 @@ function addTrial(sub: Subscription): void {
 }
 
 const slotIndex = (id: string) => slots.findIndex((s) => s.sub.id === id);
-
-/** Zombies in a window are drawn smaller than at a door so head and shoulders fit the pane. */
-function windowScale(s: SubSlot): number {
-  return 0.6 + 0.2 * Math.min(1, Math.max(0, (s.slot.z.scale - 0.8) / 0.75));
-}
 
 // ---------- helpers ----------
 const money = (n: number) =>
@@ -323,7 +316,9 @@ function positionTags(): void {
     const sx = (Number(t.dataset['x']) - cam.x) / W;
     t.style.left = (sx * 100) + '%';
     const otherPage = t.dataset['page'] !== undefined && Number(t.dataset['page']) !== page;
-    t.hidden = otherPage || sx < -0.15 || sx > 1.15;
+    // One scene at a time: slot tags belong to the mansion, trial tags to the yard.
+    const wrongScene = t.classList.contains('trial-tag') !== (cam.x >= HALL / 2);
+    t.hidden = otherPage || wrongScene || sx < -0.15 || sx > 1.15;
   });
 }
 
@@ -515,6 +510,21 @@ async function goTo(x: number, lift = 0): Promise<void> {
   await tw(R(), 'alpha', 1, 150, ease.out);
 }
 
+/** Cut the camera to the other scene (mansion or yard) through a fade. */
+async function cutTo(x: number): Promise<void> {
+  cutting = true;
+  try {
+    await tw(pageFx as unknown as Record<string, number>, 'a', 1, 110, ease.in);
+    cam.x = x;
+    await tw(pageFx as unknown as Record<string, number>, 'a', 0, 130, ease.out);
+  } catch (e) {
+    if (!isAbort(e)) throw e;
+    pageFx.a = 0;
+  } finally {
+    cutting = false;
+  }
+}
+
 /** Turn the mansion to `p` (0-based) between sequences: waits for running tweens, fades. */
 async function turnPage(p: number): Promise<void> {
   const target = clampPage(p, slots.length);
@@ -548,7 +558,6 @@ async function kill(id: string): Promise<void> {
   const i = slotIndex(id);
   const s = slots[i]!;
   const pos = slotPos(i);
-  const win = pos.kind === 'window';
   const { slot, sub } = s;
   setStatus(id, 'reaping');
   bubble(null);
@@ -557,37 +566,22 @@ async function kill(id: string): Promise<void> {
   flash = 0.8;
   if (!reduceMotion) cam.s = 3;
   slot.z.hit = 1;
-  if (win) {
-    // The smash: the pane breaks the moment the scythe lands (result already arrived).
-    sfx.crash();
-    s.pane.broken = 1;
-    const r = paneRect(pos.cx, pos.top);
-    spawnGlass(particles, r.x + r.w / 2, r.y + r.h / 2, reduceMotion);
-    spawnDissolve(particles, pos.cx + 8, windowScale(s) * slot.z.grow, reduceMotion, pos.feetY);
-  } else {
-    spawnDissolve(particles, pos.cx, slot.z.scale * slot.z.grow, reduceMotion);
-  }
+  spawnDissolve(particles, pos.cx, slot.z.scale * slot.z.grow, reduceMotion, pos.feetY);
   sfx.dissolve();
   tw(slot.z as unknown as Record<string, number>, 'hit', 0, 250);
   await tw(slot.z as unknown as Record<string, number>, 'dissolve', 1, tune.dissolve, ease.out);
   slot.z.alive = false;
-  spawnCoins(particles, pos.cx, reduceMotion, win ? pos.hitY : FLOOR - 16);
-  spawnSoul(particles, pos.cx, win ? pos.hitY - 14 : FLOOR - 30);
+  spawnCoins(particles, pos.cx, reduceMotion, pos.feetY - 16, pos.feetY);
+  spawnSoul(particles, pos.cx, pos.feetY - 30);
   sfx.coin();
   const yearly = sub.monthlyAmount * 12;
-  floatText(pos.cx, win ? pos.top + 14 : FLOOR - 70, '+' + money(yearly) + '/yr');
+  floatText(pos.cx, pos.feetY - 70, '+' + money(yearly) + '/yr');
   savedTarget += yearly;
   renderStats();
   await tw(R(), 'swing', 0, 220);
-  if (win) {
-    // Boards go over the broken window.
-    sfx.thud();
-    await tw(s.pane as unknown as Record<string, number>, 'boards', 1, 360, ease.back);
-  } else {
-    sfx.creak();
-    await tw(slot.door as unknown as Record<string, number>, 'open', 0, 320);
-    await tw(slot as unknown as Record<string, number>, 'tomb', 1, 300, ease.back);
-  }
+  sfx.creak();
+  await tw(slot.door as unknown as Record<string, number>, 'open', 0, 320);
+  await tw(slot as unknown as Record<string, number>, 'tomb', 1, 300, ease.back);
   setStatus(id, 'dead');
 }
 
@@ -595,7 +589,6 @@ async function reapOne(id: string): Promise<void> {
   const i = slotIndex(id);
   const s = slots[i]!;
   const pos = slotPos(i);
-  const win = pos.kind === 'window';
   const { slot, sub } = s;
   s.queued = false;
 
@@ -614,16 +607,10 @@ async function reapOne(id: string): Promise<void> {
   await knockKnock(slot, pc.knocks);
   bubble(null);
   setStatus(id, 'opening');
-  if (win) {
-    // The window rattles and the zombie rises behind the glass. The glass stays whole until the result.
-    sfx.growl();
-    await tw(slot.z as unknown as Record<string, number>, 'out', 1, 420, ease.out);
-  } else {
-    sfx.creak();
-    await tw(slot.door as unknown as Record<string, number>, 'open', 1, 380);
-    sfx.growl();
-    await tw(slot.z as unknown as Record<string, number>, 'out', 1, 420, ease.out);
-  }
+  sfx.creak();
+  await tw(slot.door as unknown as Record<string, number>, 'open', 1, 380);
+  sfx.growl();
+  await tw(slot.z as unknown as Record<string, number>, 'out', 1, 420, ease.out);
 
   setStatus(id, 'cancelling');
   bubble('Cancelling ' + sub.merchant.split(' ')[0] + '…');
@@ -667,8 +654,8 @@ async function celebrate(id: string): Promise<void> {
     const s = slots[i]!;
     await showSlotPage(i);
     sfx.coin();
-    spawnCoins(particles, pos.cx, reduceMotion, pos.kind === 'window' ? pos.hitY : FLOOR - 40);
-    floatText(pos.cx, pos.kind === 'window' ? pos.top + 14 : FLOOR - 70, 'Verified');
+    spawnCoins(particles, pos.cx, reduceMotion, pos.feetY - 40, pos.feetY);
+    floatText(pos.cx, pos.feetY - 70, 'Verified');
     announce(`${s.sub.merchant}: savings verified.`);
     await waitMs(900);
     return;
@@ -826,7 +813,9 @@ export function advanceDay(): void {
   syncDays();
 }
 
+/** Show the mansion or the yard. With no trials there is no yard: asking for it does nothing. */
 export function setView(v: View): void {
+  if (v === 'yard' && trials.length === 0) return;
   view = v;
   updatePager();
   document.getElementById('viewHouse')?.setAttribute('aria-pressed', String(v === 'house'));
@@ -859,8 +848,7 @@ async function finishBoss(id: string): Promise<void> {
 }
 
 /**
- * A charge came back. Door: the tombstone sinks, the door opens, the zombie rises again.
- * Window: the boards lift off the broken pane and the zombie rises behind it.
+ * A charge came back: the tombstone sinks, the door opens, the zombie rises again (either floor).
  */
 async function riseAgain(id: string): Promise<void> {
   const i = slotIndex(id);
@@ -871,14 +859,9 @@ async function riseAgain(id: string): Promise<void> {
   paceMul = 1;
   await showSlotPage(i);
   setStatus(id, 'opening');
-  if (slotPos(i).kind === 'window') {
-    sfx.thud();
-    await tw(s.pane as unknown as Record<string, number>, 'boards', 0, 300, ease.in);
-  } else {
-    await tw(slot as unknown as Record<string, number>, 'tomb', 0, 300, ease.in);
-    sfx.creak();
-    await tw(slot.door as unknown as Record<string, number>, 'open', 1, 380);
-  }
+  await tw(slot as unknown as Record<string, number>, 'tomb', 0, 300, ease.in);
+  sfx.creak();
+  await tw(slot.door as unknown as Record<string, number>, 'open', 1, 380);
   z['dissolve'] = 0;
   z['hit'] = 0;
   z['out'] = 0;
@@ -1137,14 +1120,18 @@ function update(dt: number, now: number): void {
   cam.s = Math.max(0, cam.s - dt * 8);
   const target = cameraTarget({
     focus: cam.focus,
-    // The mansion front fits one screen, so the camera stays put there and only follows to the yard.
-    reaperX: reaper.x <= 470 ? W / 2 : reaper.x,
+    reaperX: reaper.x,
     reaperBusy: busy,
     view,
+    hallW: HALL,
     viewW: W,
-    worldW: WORLD,
+    hasYard: trials.length > 0,
   });
-  cam.x += (target - cam.x) * Math.min(1, dt * (reduceMotion ? 20 : 3.5));
+  // The camera never rests between the scenes: it cuts, through a short fade.
+  if (target !== cam.x && !cutting) {
+    if (reduceMotion) cam.x = target;
+    else void cutTo(target);
+  }
   flash = Math.max(0, flash - dt * 3);
   updateParticles(particles, dt);
   savedShown += (savedTarget - savedShown) * Math.min(1, dt * 6);
@@ -1160,45 +1147,42 @@ function draw(t: number): void {
     );
   }
 
+  // One scene fills the frame: clip to it so camera shake never shows the other one.
   ctx.translate(-Math.round(cam.x), 0);
-  ctx.drawImage(bg, 0, 0);
+  ctx.beginPath();
+  ctx.rect(Math.round(cam.x), 0, W, H);
+  ctx.clip();
+  const yardScene = cam.x >= HALL / 2;
+  // No trials, no yard: only the mansion half of the background is ever drawn.
+  if (trials.length > 0) ctx.drawImage(bg, 0, 0);
+  else ctx.drawImage(bg, 0, 0, HALL, H, 0, 0, HALL, H);
 
-  torchXs().forEach((x) => drawTorch(ctx, x, t));
+  if (!yardScene) {
+    torchXs().forEach((x) => { drawTorch(ctx, x, t); drawTorch(ctx, x, t + 1.7, UPPER_FLOOR); });
 
-  // The page's slots: doors on the ground floor, windows above. At most PER_PAGE are drawn.
-  const first = page * PER_PAGE;
-  for (let local = 0; local < PER_PAGE; local++) {
-    const idx = first + local;
-    const s = slots[idx];
-    const pos = slotPos(idx);
-    if (pos.kind === 'door') {
+    // The page's slots: a ground door and an upper door per column. At most PER_PAGE are drawn.
+    const first = page * PER_PAGE;
+    for (let local = 0; local < PER_PAGE; local++) {
+      const s = slots[first + local];
       if (!s) continue;
+      const pos = slotPos(first + local);
       // Door pass 1: frame + peek zombie
       drawDoor(ctx, pos.cx, s.slot, t, (cx, slot, time) => {
-        drawZombieFor(ctx, cx, slot, s.config, time);
-      });
-    } else {
-      drawWindow(ctx, pos.cx, pos.top, s?.slot ?? EMPTY_SLOT, s?.pane ?? EMPTY_PANE, t, !s, () => {
-        if (!s) return;
-        // The zombie rises from below the sill as z.out goes 0 -> 1; the pane clips it.
-        drawZombieFor(ctx, pos.cx, s.slot, s.config, t, {
-          y: pos.feetY + (1 - s.slot.z.out) * (PANE_H + 8),
-          slide: 0,
-          scale: windowScale(s),
-        });
-      });
+        drawZombieFor(ctx, cx, slot, s.config, time, { y: pos.feetY });
+      }, pos.feetY);
     }
-  }
-  // Door pass 2: fully emerged zombies (drawn above the door)
-  for (let local = 0; local < PER_PAGE; local += 2) {
-    const s = slots[first + local];
-    if (s && s.slot.z.out > 0.5 && s.slot.z.alive) {
-      drawZombieFor(ctx, slotPos(first + local).cx, s.slot, s.config, t);
+    // Door pass 2: fully emerged zombies (drawn above the door)
+    for (let local = 0; local < PER_PAGE; local++) {
+      const s = slots[first + local];
+      if (s && s.slot.z.out > 0.5 && s.slot.z.alive) {
+        const pos = slotPos(first + local);
+        drawZombieFor(ctx, pos.cx, s.slot, s.config, t, { y: pos.feetY });
+      }
     }
+  } else {
+    trials.forEach(({ g }) => drawGrave(ctx, g, t));
+    drawFog(ctx, t, HALL);
   }
-
-  trials.forEach(({ g }) => drawGrave(ctx, g, t));
-  drawFog(ctx, t);
 
   drawReaper(ctx, reaper, t);
   drawParticles(ctx, particles, t);
@@ -1230,15 +1214,6 @@ function draw(t: number): void {
     ctx.fillRect(0, 0, W, H);
   }
 }
-
-/** Shown for window positions that have no subscription yet (dark, shuttered, no eyes). Never mutated. */
-const EMPTY_SLOT: DoorSlotState = {
-  door: { open: 0, shake: 0 },
-  z: { out: 0, scale: 1, grow: 1, dissolve: 0, hit: 0, alive: false },
-  tomb: 0,
-  status: 'idle',
-};
-const EMPTY_PANE: PaneState = { broken: 0, boards: 0 };
 
 function frame(now: number): void {
   const dt = Math.min(0.05, (now - last) / 1000);
@@ -1308,6 +1283,7 @@ export function initHallway(
   reaper = { x: START_X, facing: 1, walk: 0, moving: false, knock: 0, swing: 0, scared: false, run: false, lift: 0, alpha: 1 };
   particles = [];
   cam = { s: 0, x: 0, focus: null };
+  cutting = false;
   view = 'house';
   dayOffset = 0;
   extraEaten = 0;
