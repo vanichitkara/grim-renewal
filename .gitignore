@@ -20,6 +20,9 @@ gmail-test-*
 .vscode/
 .idea/
 
+# local data (shared-tips store)
+/data/
+
 # logs and caches
 *.log
 .vite/

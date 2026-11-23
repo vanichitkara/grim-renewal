@@ -34,6 +34,9 @@ export const MANIFEST: readonly SpriteDef[] = [
   def('door_frame', 40, 62, 1),
   def('door_panel', 34, 58, 1),
   def('tombstone', 14, 16, 1),
+  def('landing', 16, 22, 1),
+  def('mansion_wall', 16, 16, 1),
+  def('smoke', 16, 16, 4),
   def('coin', 4, 4, 4),
   def('ghost', 7, 7, 2),
 ];

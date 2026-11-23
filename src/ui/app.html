@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<link rel="icon" type="image/svg+xml" href="./favicon.svg">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>window.GRIM_CLIENT_ID = "734928104915-q17khqcla05jtilaui4tmha5hat0qaaa.apps.googleusercontent.com";</script>
 <title>Grim Renewal</title>
@@ -20,7 +21,10 @@
   --rot:    #8fc25a;
   --blood:  #e0574f;
   --spirit: #c99bff;
-  --display: "Pixelify Sans", "Courier New", monospace;
+  /* Readability first: Atkinson Hyperlegible keeps look-alike letters apart (I l 1, O 0, rn m).
+     The pixel face is kept for the logo only (--brand). */
+  --brand:   "Pixelify Sans", "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --display: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
   --body:    "Atkinson Hyperlegible", system-ui, sans-serif;
   color-scheme: dark;
 }
@@ -47,7 +51,7 @@ body {
   gap: 20px;
 }
 header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 20px; }
-h1 { font-family: var(--display); font-weight: 700; font-size: clamp(26px, 4vw, 38px); margin: 0; letter-spacing: 0.5px; text-wrap: balance; }
+h1 { font-family: var(--brand); font-weight: 700; font-size: clamp(26px, 4vw, 38px); margin: 0; letter-spacing: 0.5px; text-wrap: balance; }
 .tagline { color: var(--mist); margin: 0; max-width: 60ch; }
 .proto { font-family: var(--display); font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--coin); border: 1px solid var(--stone); padding: 3px 8px; border-radius: 3px; white-space: nowrap; }
 
@@ -161,6 +165,61 @@ summary { cursor: pointer; font-family: var(--display); font-weight: 600; }
   .tag .st { display: none; }
 }
 
+/* Results-first header */
+.results { background: var(--crypt); border: 1px solid var(--stone); border-radius: 4px; padding: 16px 18px; display: grid; gap: 12px; }
+.results h2 { font-size: clamp(20px, 3.2vw, 28px); text-wrap: balance; }
+.chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.chips:empty { display: none; }
+.chip.ok { color: var(--rot); }
+.savings { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.savings .stat strong { color: var(--coin); }
+.savings .stat .sub-note { font-size: 12px; color: var(--mist); min-height: 1.2em; }
+/* Scene | List */
+.list-wrap { overflow-x: auto; border: 1px solid var(--stone); border-radius: 4px; background: var(--crypt); }
+table.list { width: 100%; border-collapse: collapse; font-size: 14px; }
+table.list th, table.list td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--stone); vertical-align: top; }
+table.list thead th { font-family: var(--display); font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color: var(--mist); white-space: nowrap; }
+table.list tbody th { font-weight: 700; }
+table.list td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+table.list td .sub { display: block; font-size: 12px; color: var(--mist); max-width: 34ch; }
+table.list td.acts { display: flex; gap: 6px; flex-wrap: wrap; }
+table.list tbody tr:last-child > * { border-bottom: 0; }
+body.view-list #stageWrap, body.view-list #ledger, body.view-list #hordeHead, body.view-list #cards,
+body.view-list #horde, body.view-list #graveyard, body.view-list #sceneSeg { display: none !important; }
+.card .status { font-size: 13px; color: var(--mist); }
+.card .status b { color: var(--bone); }
+.card .btnrow { margin-top: 2px; }
+@media (max-width: 460px) { .savings { grid-template-columns: 1fr; } }
+/* Cancel kit */
+.kit-overlay { position: fixed; inset: 0; z-index: 9999; background: rgba(18, 14, 28, 0.88); display: flex; align-items: center; justify-content: center; padding: 12px; }
+.kit-box { background: var(--crypt); border: 1px solid var(--stone); border-radius: 8px; padding: 20px; width: min(640px, 100%); max-height: calc(100vh - 24px); overflow-y: auto; color: var(--bone); display: grid; gap: 12px; align-content: start; }
+.kit-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.kit-head h2 { overflow-wrap: anywhere; }
+.kit-why { margin: 0; color: var(--bone); background: var(--night); border: 1px dashed var(--stone); border-radius: 3px; padding: 10px 12px; }
+.kit-src { color: var(--mist); }
+.kit-body { display: grid; gap: 12px; }
+.kit-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--stone); }
+.kit-tab { background: transparent; color: var(--mist); border-radius: 3px 3px 0 0; border: 1px solid transparent; border-bottom: 0; }
+.kit-tab[aria-selected="true"] { background: var(--stone); color: var(--bone); border-color: var(--stone); }
+.kit-panel { display: grid; gap: 10px; align-content: start; }
+.kit-panel p, .kit-panel ol, .kit-panel ul { margin: 0; }
+.kit-panel ol, .kit-panel ul { padding-left: 20px; display: grid; gap: 4px; }
+.kit-text { width: 100%; background: var(--night); color: var(--bone); border: 1px solid var(--stone); border-radius: 3px; padding: 8px 10px; font: 14px/1.45 var(--body); resize: vertical; }
+a.btn { display: inline-block; font-family: var(--display); font-weight: 600; font-size: 14px; background: var(--bone); color: var(--night); border-radius: 3px; padding: 8px 12px; text-decoration: none; justify-self: start; }
+a.btn:hover { background: var(--coin); }
+a.btn.ghost { background: transparent; color: var(--bone); border: 1px solid var(--stone); }
+a.btn:focus-visible, .kit-box a:focus-visible, .kit-box textarea:focus-visible { outline: 2px solid var(--coin); outline-offset: 2px; }
+.kit-done { border-top: 1px solid var(--stone); padding-top: 12px; display: grid; gap: 8px; }
+.kit-done h3 { margin: 0; font-family: var(--display); font-size: 16px; }
+.kit-what { border: 1px solid var(--stone); border-radius: 4px; padding: 10px 12px; display: grid; gap: 10px; margin: 0; }
+.kit-what legend { font-family: var(--display); padding: 0 6px; }
+.kit-row { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; }
+.kit-share { display: flex; gap: 8px; align-items: flex-start; font-size: 14px; }
+.kit-share input { margin-top: 4px; accent-color: var(--coin); }
+.kit-ok { color: var(--rot); margin: 0; }
+.kit-date input { background: var(--night); color: var(--bone); border: 1px solid var(--stone); border-radius: 3px; padding: 4px 6px; font: inherit; }
+.gate .consent-extra { font-size: 13px; color: var(--mist); }
+
 /* Sign-in gate: until the user signs in (or opens ?demo) only the header and this card show. */
 body.locked .wrap > :not(header):not(#loginGate):not(script) { display: none !important; }
 body.locked .proto, body.locked #bridgeChip, body.locked #scanStatus, body.locked #connectGmail { display: none !important; }
@@ -170,6 +229,20 @@ body.locked .proto, body.locked #bridgeChip, body.locked #scanStatus, body.locke
 .gate .consent { color: var(--bone); border: 1px dashed var(--stone); border-radius: 3px; padding: 12px 14px; font-size: 14px; }
 .gate .gate-msg { color: var(--blood); min-height: 1.4em; }
 .gate button { font-size: 16px; padding: 12px 22px; }
+
+/* Settings dialog */
+.settings { padding: 0; border: 1px solid var(--stone); border-radius: 4px; background: var(--crypt); color: var(--bone); width: min(420px, calc(100vw - 32px)); }
+.settings::backdrop { background: rgba(18, 14, 28, 0.75); }
+.settings-body { padding: 18px 20px; display: grid; gap: 18px; }
+.settings-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.settings h2 { margin: 0; font-size: 20px; }
+.settings h3 { margin: 0 0 6px; font-size: 15px; color: var(--coin); }
+.settings section { display: grid; gap: 8px; justify-items: start; }
+.settings label { display: grid; gap: 4px; font-size: 14px; width: 100%; }
+.settings label.check { display: flex; align-items: center; gap: 8px; }
+.settings input[type=range] { width: 100%; accent-color: var(--coin); }
+.settings input[type=checkbox] { accent-color: var(--coin); }
+.settings .note { margin: 0; }
 </style>
 </head>
 <body class="locked">
@@ -180,9 +253,10 @@ body.locked .proto, body.locked #bridgeChip, body.locked #scanStatus, body.locke
       <p class="tagline">Make sure the dead stay dead. Every forgotten subscription is a zombie. The Reaper goes knocking — and waits for the result before swinging.</p>
     </div>
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-      <span class="proto">Prototype · sample data</span>
+      <span class="proto">Demo · sample data</span>
       <button id="connectGmail" type="button" class="ghost" style="font-size:12px;padding:3px 10px;">Connect Gmail</button>
       <span id="scanStatus" hidden style="font-family:var(--display);font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--mist);">Scanning receipts…</span>
+      <button id="openSettings" type="button" class="ghost" style="font-size:12px;padding:3px 10px;" aria-haspopup="dialog">Settings</button>
       <span id="bridgeChip" role="status" hidden style="font-family:var(--display);font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--mist);">Browser: checking…</span>
     </div>
   </header>
@@ -191,29 +265,45 @@ body.locked .proto, body.locked #bridgeChip, body.locked #scanStatus, body.locke
     <h2 id="gateH">The crypt is locked</h2>
     <p>Sign in with Google so the Reaper can look for your receipts.</p>
     <p class="consent">The Reaper only reads receipts. We search your inbox for billing emails, extract the merchant name, amount, and date, and discard the rest. We never read your personal email, store message content, or share your data.</p>
+    <p class="consent-extra">Optional: after you cancel, you can choose to share anonymously which method worked.</p>
     <button id="gateConnect" type="button">Connect Gmail</button>
     <p id="gateMsg" class="gate-msg" role="status" aria-live="polite"></p>
+  </section>
+
+  <section class="results" id="results" aria-labelledby="headline">
+    <h2 id="headline" aria-live="polite">Looking for subscriptions…</h2>
+    <ul class="chips" id="chips" aria-label="Highlights"></ul>
+    <div class="savings">
+      <div class="stat"><span id="avoidedLabel">Avoided so far (verified)</span><strong id="avoidedVal">$0.00</strong><small class="sub-note" id="avoidedNote"></small></div>
+      <div class="stat"><span id="projectedLabel">Next 12 months (estimate)</span><strong id="projectedVal">$0.00</strong><small class="sub-note">A guess from receipts that stopped or cancellations you told us about.</small></div>
+    </div>
   </section>
 
   <div class="clock">
     <div class="today"><span id="today"></span><small id="todaySub"></small></div>
     <div class="btnrow">
-      <div class="seg" role="group" aria-label="Scene">
-        <button id="viewHouse" type="button" aria-pressed="true">Hallway</button>
+      <div class="seg" role="group" aria-label="Show as">
+        <button id="showScene" type="button" aria-pressed="true">Scene</button>
+        <button id="showList" type="button" aria-pressed="false">List</button>
+      </div>
+      <div class="seg" id="sceneSeg" hidden role="group" aria-label="Mansion or graveyard">
+        <button id="viewHouse" type="button" aria-pressed="true">Mansion</button>
         <button id="viewYard" type="button" aria-pressed="false">Graveyard</button>
       </div>
       <button id="advanceDay" type="button" class="ghost" hidden>Advance one day</button>
     </div>
   </div>
 
+  <div class="list-wrap" id="listView" hidden role="region" aria-label="All subscriptions" tabindex="0"></div>
+
   <div class="stage" id="stageWrap">
-    <canvas id="stage" aria-label="Hallway of doors and a moonlit graveyard. Each door hides a subscription zombie; each grave holds a free trial. The grim reaper walks to a door or grave and cancels it."></canvas>
+    <canvas id="stage" aria-label="A haunted mansion of doors and a moonlit graveyard. Each door hides a subscription zombie; each grave holds a free trial. The grim reaper walks to a door or grave and cancels it."></canvas>
     <div class="bubble" id="bubble" hidden></div>
   </div>
 
-  <section class="ledger" aria-label="Totals">
+  <section class="ledger" id="ledger" aria-label="Totals">
     <div class="stat eaten"><span>The horde ate this year</span><strong id="eaten">$0</strong></div>
-    <div class="stat saved"><span>You'll save per year</span><strong id="saved">$0.00</strong></div>
+    <div class="stat saved"><span>Cancelled by the Reaper this session (per year)</span><strong id="saved">$0.00</strong></div>
     <div class="stat"><span>Zombies still standing</span><strong id="left">0</strong></div>
   </section>
 
@@ -221,7 +311,7 @@ body.locked .proto, body.locked #bridgeChip, body.locked #scanStatus, body.locke
     <h2>⚠️ Boss Door — The Reaper Fled</h2>
     <p class="note" id="bossLead"></p>
     <ol>
-      <li>Call <span class="phone" id="bossPhone"></span>. Tuesday mornings have the shortest hold times.</li>
+      <li>Call <span class="phone" id="bossPhone"></span>.</li>
       <li>Read this script:
         <div class="script" id="bossScript"></div>
       </li>
@@ -233,7 +323,7 @@ body.locked .proto, body.locked #bridgeChip, body.locked #scanStatus, body.locke
     </div>
   </section>
 
-  <section>
+  <section id="hordeHead">
     <div class="horde-head">
       <h2>The Horde</h2>
       <div class="btnrow">
@@ -260,7 +350,7 @@ body.locked .proto, body.locked #bridgeChip, body.locked #scanStatus, body.locke
     </div>
     <div class="cards trials" id="trialCards" style="margin-top:12px"></div>
   </section>
-  <div class="btnrow"><button id="raiseRevenant" type="button" class="ghost" hidden>Debug: a cancelled charge comes back</button>
+  <div class="btnrow"><button id="raiseRevenant" type="button" class="ghost" hidden>Show a cancelled charge coming back</button>
     <button id="bridgeTest" type="button" class="ghost" hidden>Test the browser bridge</button></div>
   <p id="graveyardLive" class="sr-only" aria-live="polite" aria-atomic="true"></p>
 
@@ -279,15 +369,16 @@ body.locked .proto, body.locked #bridgeChip, body.locked #scanStatus, body.locke
     <div class="state">State machine: <b id="stateName">idle</b> <span id="stateSub"></span></div>
   </details>
 
-  <p class="note">Prototype. Art is placeholder pixel work drawn in code. Cancellations are simulated; the animation waits for the result before choosing kill or retreat. Swap in real pixel-art sprites and connect the Gmail pipeline for the real app.</p>
+  <p class="note">All pixel art is original and drawn by script. In the demo, the subscriptions and cancels are made up. The animation waits for the result before choosing kill or retreat. Savings that count are the ones shown at the top: avoided charges are only counted after a receipt gap or a cancellation you told us about.</p>
 </div>
 
 <!-- aria-live region for screen readers -->
 <div id="ariaLive" class="sr-only" aria-live="polite" aria-atomic="true"></div>
 
 <script type="module">
-import { initHallway, setCancelHandler, onHordeChange, setView, advanceDay, tune } from '../animation/hallway.ts';
-import { SUBS, CONFIGS, TRIALS, TRIAL_CONFIGS, fakeCancel } from './demo-data.ts';
+import { initHallway, setCancelHandler, onHordeChange, setView, advanceDay, tune, celebrateVerified, setSlotLabel } from '../animation/hallway.ts';
+import { SUBS, CONFIGS, TRIALS, TRIAL_CONFIGS, MORE_SUBS, MORE_CONFIGS, DEMO_CLAIMS, fakeCancel } from './demo-data.ts';
+import { createDashboard } from './dashboard.ts';
 import { showConsentBanner } from './consent-banner.ts';
 import { showApprovalDialog } from './approval-dialog.ts';
 import { runPipeline } from '../pipeline/pipeline.ts';
@@ -296,6 +387,8 @@ import { createPotionLoader } from './potion-loader.ts';
 import { fetchProfileEmail } from '../pipeline/gmail-profile.ts';
 import { setAdapters } from '../agents/reaper.ts';
 import { redirectUriFor } from '../pipeline/oauth-redirect.ts';
+import { readAuth, saveToken, saveEmail, liveToken, dropToken, clearAuth, buildAuthUrl, shouldTrySilent, markSilentTried, clearSilentTried, isSilentMiss, revokeToken } from '../pipeline/session-auth.ts';
+import { initSettings, forgetAccount } from './settings.ts';
 import { createSimulatedAdapter } from '../agents/adapters/simulated.ts';
 import { createCancelPlayerAdapter } from './cancel-player.ts';
 import { emit, subscribe } from '../agents/event-bus.ts';
@@ -341,6 +434,16 @@ document.getElementById('bridgeTok').addEventListener('keydown', (e) => {
   }
 }
 
+// ── Results header, List view, Cancel kit: one dashboard for the whole page ──
+// Demo mode keeps nothing between visits; the real app remembers claims and celebrations locally.
+const isDemoPage = new URLSearchParams(location.search).has('demo') && !new URLSearchParams(location.hash.replace(/^#/, '')).get('access_token');
+const dashboard = createDashboard({
+  remember: !isDemoPage,
+  extraClaims: isDemoPage ? DEMO_CLAIMS : {},
+  onVerified: (id) => celebrateVerified(id),
+  onStatus: (id, label) => setSlotLabel(id, label),
+});
+
 // ── Graveyard: trials counting down; Revenant badges ────────────────────────
 const deadIds = new Set();
 const revenantIds = new Set();
@@ -372,6 +475,13 @@ function renderGraveyard(trials = lastTrials) {
   lastTrials = trials;
   const box = document.getElementById('trialCards');
   document.getElementById('graveyard').hidden = trials.length === 0;
+  // No trials, no graveyard: hide the Mansion | Graveyard switch too, and leave the yard if it was showing.
+  const seg = document.getElementById('sceneSeg');
+  const noYard = trials.length === 0;
+  if (seg.hidden !== noYard) {
+    seg.hidden = noYard;
+    if (noYard && document.getElementById('viewYard').getAttribute('aria-pressed') === 'true') setView('house');
+  }
   document.getElementById('buryAll').disabled = !trials.some(t => t.status === 'idle');
   box.replaceChildren(...trials.map(({ sub, days, status }) => {
     const c = document.createElement('article');
@@ -387,7 +497,15 @@ function renderGraveyard(trials = lastTrials) {
     const act = trialAction({ status });
     const btn = mk('button', '', act.label); btn.type = 'button'; btn.disabled = !act.on;
     btn.addEventListener('click', () => askApproval([sub]));
-    c.append(mk('span', 'cat', 'Free trial'), mk('h3', '', sub.merchant), l1, l2, bar, btn);
+    const extra = mk('div', 'btnrow');
+    const remind = mk('button', 'ghost', 'Remind me'); remind.type = 'button';
+    remind.setAttribute('aria-label', `Remind me before ${sub.merchant} charges`);
+    remind.addEventListener('click', () => dashboard.remind(sub.id));
+    const kit = mk('button', 'ghost', 'Cancel kit'); kit.type = 'button';
+    kit.setAttribute('aria-label', `Cancel kit for ${sub.merchant}`);
+    kit.addEventListener('click', () => dashboard.openKit(sub.id));
+    extra.append(remind, kit);
+    c.append(mk('span', 'cat', 'Free trial'), mk('h3', '', sub.merchant), l1, l2, bar, btn, extra);
     return c;
   }));
   if (trials.length && !graveyardAnnounced) {
@@ -436,9 +554,14 @@ function buildCard(s) {
   l2.append('Eaten so far: ', e);
   const bar = mk('div', 'rotbar'); bar.title = 'How forgotten (0 = active, full = ghost)';
   bar.append(mk('i'));
+  const status = mk('div', 'status');
   const btn = mk('button'); btn.type = 'button'; btn.textContent = 'Send the Reaper';
   btn.addEventListener('click', () => askApproval([s]));
-  c.append(cat, h, l1, l2, bar, btn);
+  const kit = mk('button', 'ghost'); kit.type = 'button'; kit.textContent = 'Cancel kit';
+  kit.setAttribute('aria-label', `Cancel kit for ${s.merchant}`);
+  kit.addEventListener('click', () => dashboard.openKit(s.id));
+  const row = mk('div', 'btnrow'); row.append(btn, kit);
+  c.append(cat, h, l1, l2, bar, status, row);
   return c;
 }
 
@@ -446,6 +569,7 @@ function renderHorde({ visible, overflow, trials }) {
   visibleSubs = visible;
   allSubs = [...visible, ...overflow];
   renderGraveyard(trials);
+  dashboard.setData(visible, trials);
   const box = document.getElementById('cards');
   const ids = new Set(visible.map(s => s.id));
   for (const [id, el] of cardEls) {
@@ -458,6 +582,7 @@ function renderHorde({ visible, overflow, trials }) {
     const btn = el.querySelector('button');
     if (approvedIds.has(s.id)) { btn.disabled = true; }
   });
+  dashboard.refresh(); // new cards need their status line
   const list = document.getElementById('hordeList');
   list.replaceChildren(...overflow.map(s => {
     const li = document.createElement('li');
@@ -498,6 +623,8 @@ document.getElementById('bossDone').addEventListener('click', () => {
 subscribe((e) => {
   if (!('subscriptionId' in e)) return;
   const el = cardEls.get(e.subscriptionId);
+  const reaperState = { approved: 'started', cancel_start: 'started', cancel_ok: 'done', cancel_fail: 'failed', boss_resolved: 'done', revenant: 'came_back' }[e.kind];
+  if (reaperState) dashboard.setReaper(e.subscriptionId, reaperState);
   if (e.kind === 'revenant') {
     markRevenant(e.subscriptionId);
     const s = allSubs.find(x => x.id === e.subscriptionId);
@@ -526,7 +653,31 @@ function parseHashParams() {
 }
 
 const hashParams = parseHashParams();
-const oauthToken = hashParams.get('access_token');
+// Sign-in lasts until Sign out (session-auth.ts): a token Google just sent is saved; a saved one is reused
+// until it expires, then a silent re-auth runs below. ?demo never uses a saved token.
+const authNow = Date.now();
+const hashToken = hashParams.get('access_token');
+if (hashToken) {
+  saveToken(localStorage, hashToken, Number(hashParams.get('expires_in')) || null, authNow);
+  if (hashParams.get('state')) saveEmail(localStorage, hashParams.get('state'));
+  clearSilentTried(sessionStorage);
+}
+let savedAuth = readAuth(localStorage);
+if (savedAuth?.token && !liveToken(savedAuth, authNow)) { dropToken(localStorage); savedAuth = readAuth(localStorage); }
+const wantsDemo = new URLSearchParams(location.search).has('demo');
+const oauthToken = hashToken || (wantsDemo ? null : liveToken(savedAuth, authNow));
+let currentEmail = oauthToken ? (savedAuth?.email ?? null) : null;
+
+initSettings(document.getElementById('openSettings'), {
+  getEmail: () => currentEmail,
+  onSignOut: async () => {
+    const t = readAuth(localStorage)?.token;
+    if (t) await revokeToken(t);
+    clearAuth(localStorage, sessionStorage);
+    forgetAccount(localStorage);
+    sessionStorage.removeItem('grim_simulate');
+  },
+});
 
 if (oauthToken) {
   document.body.classList.remove('locked'); // signed in: open the crypt
@@ -559,15 +710,18 @@ if (oauthToken) {
 
   // Resolve the account email: OAuth state if present, else the email-entry step
   // (suggested from Gmail's profile call). Never logged or stored.
-  const accountEmailP = hashParams.get('state')
-    ? Promise.resolve(hashParams.get('state'))
+  const knownEmail = hashParams.get('state') || savedAuth?.email;
+  const accountEmailP = knownEmail
+    ? Promise.resolve(knownEmail)
     : fetchProfileEmail(oauthToken).then((suggested) => showEmailEntry({ suggested }));
 
   accountEmailP.then((accountEmail) => {
+    currentEmail = accountEmail;
+    saveEmail(localStorage, accountEmail);
     const loader = createPotionLoader(document.getElementById('stageWrap').parentElement.insertBefore(
       document.createElement('div'), document.getElementById('stageWrap')));
     // Say what happened. Never claim success on a failed or empty scan.
-    runPipeline(oauthToken, accountEmail, (p) => loader.update(p)).then(
+    runPipeline(oauthToken, accountEmail, (p) => loader.update(p), (r) => dashboard.setSweep(r)).then(
       (count) => {
         loader.done(count);
         if (!scanStatus) return;
@@ -582,6 +736,7 @@ if (oauthToken) {
           : code === '403' ? 'Gmail API is off, or this account is not a test user.'
           : code === '429' ? 'Gmail rate limit. Try again soon.'
           : 'Scan failed.';
+        if (code === '401') dropToken(localStorage); // dead token: the next load re-auths silently
         loader.fail(hint);
         if (scanStatus) { scanStatus.hidden = false; scanStatus.textContent = hint; }
         const connect = document.getElementById('connectGmail');
@@ -610,12 +765,7 @@ if (oauthToken) {
           return;
         }
         if (qs.has('simulate')) sessionStorage.setItem('grim_simulate', '1');
-        const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
-        url.searchParams.set('client_id', clientId);
-        url.searchParams.set('redirect_uri', redirectUriFor(location));
-        url.searchParams.set('response_type', 'token');
-        url.searchParams.set('scope', 'https://www.googleapis.com/auth/gmail.readonly');
-        location.href = url.toString();
+        location.href = buildAuthUrl({ clientId, redirectUri: redirectUriFor(location), loginHint: savedAuth?.email });
       },
       // onDeny: do nothing
       () => {},
@@ -624,10 +774,15 @@ if (oauthToken) {
 
   if (qs.has('demo')) {
     // ── Demo mode: fake subscriptions, no sign-in. Only with ?demo. ────────────
-    // TODO(remove-demo): hide this path from public view before launch (docs/week-plan.md).
+    // Kept on purpose for judges: Google's testing mode lets only listed test users sign in.
     document.body.classList.remove('locked');
     setCancelHandler(fakeCancel);
-    initHallway([...SUBS, ...TRIALS], [...CONFIGS, ...TRIAL_CONFIGS]);
+    // ?demo&many adds six more so the mansion needs a second page and the List has real length.
+    const many = qs.has('many');
+    initHallway(
+      [...SUBS, ...(many ? MORE_SUBS : []), ...TRIALS],
+      [...CONFIGS, ...(many ? MORE_CONFIGS : []), ...TRIAL_CONFIGS],
+    );
     document.getElementById('advanceDay').hidden = false; // demo only; the real app uses real dates
 
     // Scripted revenant: cancel a zombie first, then press this to bring it back.
@@ -642,11 +797,23 @@ if (oauthToken) {
   } else {
     // ── Locked: nothing but the sign-in card until the user connects Gmail. ────
     const gate = document.getElementById('loginGate');
+    const gateMsg = document.getElementById('gateMsg');
     gate.hidden = false;
     document.getElementById('gateConnect').addEventListener('click', signIn);
-    if (hashParams.get('error')) {
-      document.getElementById('gateMsg').textContent = 'Sign-in did not finish. Press Connect Gmail to try again.';
+    const authError = hashParams.get('error');
+    if (authError) {
+      // A silent re-auth that needs a click is not a failure: just ask the user to connect.
+      gateMsg.textContent = isSilentMiss(authError)
+        ? 'Your sign-in ran out. Press Connect Gmail to continue.'
+        : 'Sign-in did not finish. Press Connect Gmail to try again.';
       history.replaceState(null, '', location.pathname + location.search);
+    } else if (window.GRIM_CLIENT_ID && shouldTrySilent(savedAuth, sessionStorage, authNow)) {
+      // Signed in before and never signed out, but the token expired: ask Google with no screen.
+      // One try per tab (markSilentTried), so this can never loop.
+      markSilentTried(sessionStorage);
+      if (qs.has('simulate')) sessionStorage.setItem('grim_simulate', '1');
+      gateMsg.textContent = 'Signing you back in…';
+      location.replace(buildAuthUrl({ clientId: window.GRIM_CLIENT_ID, redirectUri: redirectUriFor(location), silent: true, loginHint: savedAuth?.email }));
     }
   }
 }

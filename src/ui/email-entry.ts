@@ -105,7 +105,7 @@ function drawScene(g: CanvasRenderingContext2D, s: Scene, now: number, reduced: 
   g.fillRect(76, 10, 328, 62);
   g.fillStyle = C.crypt;
   g.fillRect(76, 10, 328, 62);
-  g.font = '14px monospace';
+  g.font = '15px "Atkinson Hyperlegible", system-ui, sans-serif'; // readable: no look-alike letters
   g.textBaseline = 'middle';
   const text = s.shown.length > 36 ? s.shown.slice(-36) : s.shown;
   const tw = g.measureText(text).width;
@@ -127,7 +127,7 @@ function drawScene(g: CanvasRenderingContext2D, s: Scene, now: number, reduced: 
   }
 
   // Keyboard
-  g.font = '9px monospace';
+  g.font = 'bold 10px "Atkinson Hyperlegible", system-ui, sans-serif';
   g.textAlign = 'center';
   const hot = s.tap && s.tapAt >= 0 && now - s.tapAt < TAP_MS * 2 ? s.tap : null;
   for (let r = 0; r < KEY_ROWS.length; r++) {

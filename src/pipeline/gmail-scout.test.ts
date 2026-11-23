@@ -86,3 +86,34 @@ describe('scanInbox progress', () => {
     expect(seen.map((p) => p.read)).toEqual([0, 1, 2]);
   });
 });
+
+describe('scanInbox savings fields', () => {
+  const RECEIPT = 'Your receipt. You were charged $9.99/month for your plan.';
+
+  it('fills senderDomain, currency and sorted unique chargeDates', async () => {
+    fakeGmail([
+      { id: 'a2', snippet: RECEIPT, from: 'Netflix <billing@netflix.com>', date: 'Tue, 03 Mar 2026 10:00:00 +0000' },
+      { id: 'a1', snippet: RECEIPT, from: 'Netflix <billing@netflix.com>', date: 'Tue, 03 Feb 2026 10:00:00 +0000' },
+      { id: 'a3', snippet: RECEIPT, from: 'Netflix <billing@netflix.com>', date: 'Tue, 03 Mar 2026 18:00:00 +0000' },
+    ]);
+    const [s] = await scanInbox('tok', 'me@example.com');
+    expect(s!.senderDomain).toBe('netflix.com');
+    expect(s!.currency).toBe('USD');
+    expect(s!.chargeDates).toEqual(['2026-02-03', '2026-03-03']);
+    expect(s!.chargeCount).toBe(3);
+    expect(s!.cancellationEmailDate).toBeUndefined();
+  });
+
+  it('records only the date of a cancellation email, and widens the query', async () => {
+    const { urls } = fakeGmail([
+      { id: 'a1', snippet: RECEIPT, from: 'Netflix <billing@netflix.com>', date: 'Tue, 03 Feb 2026 10:00:00 +0000' },
+      { id: 'a2', snippet: "We're sorry to see you go. Your membership has been cancelled.", from: 'Netflix <info@netflix.com>', date: 'Fri, 20 Feb 2026 10:00:00 +0000' },
+    ]);
+    const [s] = await scanInbox('tok', 'me@example.com');
+    expect(s!.cancellationEmailDate).toBe('2026-02-20');
+    expect(JSON.stringify(s)).not.toMatch(/sorry|membership/i);
+    const q = urls[0]!.searchParams.get('q')!;
+    expect(q).toMatch(/in:inbox/);
+    expect(q).toMatch(/cancelled OR canceled OR "membership ends" OR "sorry to see you go"/);
+  });
+});

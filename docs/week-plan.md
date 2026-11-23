@@ -12,7 +12,7 @@ Ship a demo-ready app for the Costume Contest. Judges see:
 ## Week 1 — Animation First
 **Goal:** A working hallway with fake data that looks good enough to keep.
 
-- [ ] Port `reaper.html` → `src/ui/app.html` (done — see `public/reaper.html`)
+- [x] Port `reaper.html` → `src/ui/app.html` (the old standalone page was removed)
 - [ ] Extract animation into `src/animation/` (tween, ease, draw functions)
 - [ ] Add the `src/types.ts` event bus hook (animation waits on `AgentEvent`)
 - [ ] Add a `?debug` query param to show/hide the tuning panel ✓
@@ -28,7 +28,7 @@ Ship a demo-ready app for the Costume Contest. Judges see:
 
 - [ ] Set up Google Cloud project, enable Gmail API, configure OAuth consent (testing mode)
 - [ ] Seed the demo Gmail account with fake receipts (5+ merchants, mix of monthly/annual, one phone-only)
-- [ ] Implement `src/pipeline/parse-receipt.ts` (done — spec in `.kiro/specs/receipt-parser.md`)
+- [ ] Implement `src/pipeline/parse-receipt.ts` (done — spec in `.kiro/specs/receipt-parser/`)
 - [ ] Implement `src/pipeline/gmail-scout.ts` (Gmail MCP, read-only, query-level filter)
 - [ ] Implement `src/agents/coroner.ts` (done — scores from activity signals)
 - [ ] Wire Scout → Coroner → event bus → animation
@@ -156,15 +156,24 @@ Final frame: the hallway, four tombstones, $995.64/yr saved.
 
 ## In progress / queued (set 2026-11-22)
 
-- [~] **Cancellation Player** (worker running): watch the Reaper cancel on dummy merchant sites in `public/mock/`, approve each step.
-- [ ] **Boss Door call console** (next, after the Player lands; both edit `index.html`):
-  - A simulated AI phone agent: dial, menu, hold, human agent, the AI says it is an AI calling for the user, declines offers, gets a confirmation number. Clearly labelled "Simulation: no real call is placed".
-  - Behind a `VoiceCallProvider` interface so a real phone provider can plug in later.
-  - Explicit user consent before the call, listen-in, Take over and Hang up buttons.
-  - A "seamless kit" that is real today: a tap-to-call link, the copy-script button, a written-cancellation email draft, a dispute letter, and a calendar reminder (.ics) to check the card 35 days later for a returning charge.
-  - Remove the invented "Tuesday mornings have the shortest wait" line from the Boss Door panel unless a source is found.
-  - `docs/phone-agent.md`: how a real AI call would work, and the legal limits (FCC 24-17 treats AI voices as "artificial voice" under the TCPA; California AI-voice disclosure and all-party recording consent; identity checks hand the call to the user).
-- [ ] Then: Revenant dispute flow, then Ghosts detection (above).
+- [x] **Cancellation Player** (done, merged): watch the Reaper cancel on dummy merchant sites in `public/mock/`, approve each step.
+- **DROPPED (user decision 2026-11-22): the simulated AI phone-call console.** The app will not place calls for the user
+  (legal limits: FCC 24-17 treats AI voices as "artificial voice" under the TCPA; California AI-voice disclosure and
+  all-party recording consent; companies check identity). A fake call console would promise something we will not ship.
+- [ ] **Call kit** (replaces it): for a phone-only company, show a tap-to-call link, the call script with a copy button,
+  a written-cancellation email draft (opens the user's mail app with the text filled in), a dispute letter, and a
+  calendar reminder (.ics) to re-check for a returning charge. Remove the invented "Tuesday mornings have the
+  shortest wait" line.
+- [ ] **Verified savings (the core idea)**: after the user cancels, sweep the inbox again. Count a saving only when a
+  cancellation confirmation email appears AND no new receipt arrives after the next renewal date. Show two numbers:
+  "Pending" and "Verified". Gold coins drop on verification, not at the click. Read-only Gmail, store only a flag and a date.
+- [ ] **Cancel guide per subscription**: the easiest path first (cancel link and steps, email draft, call kit), with a
+  status: Found, Cancel started, Waiting to verify, Verified, Came back.
+- [ ] **Trial guard**: a reminder (.ics) 2 days before a trial ends.
+- [ ] **Results-first screen plus a List view** next to the hallway scene (see the UX notes in the chat of 2026-11-22).
+- [ ] Then: Revenant dispute flow (fits Verified savings: a charge after verification becomes a Revenant), then Ghosts.
+- Playwright "assisted cancel" stays a local power-user feature. The user signs in in the visible window; the robot never
+  types a password (the adapter already stops at a login page; resume-after-login is a possible next step).
 
 ---
 
@@ -172,7 +181,7 @@ Final frame: the hallway, four tombstones, $995.64/yr saved.
 
 - **Landing page first.** `src/ui/index.html` is the landing page and is what the live site opens. The app is `src/ui/app.html`. A Google sign-in return that lands on the site root is handed to `app.html` by a small script in the landing page, so the redirect URI registered in Google Cloud stays the site root.
 - **Sign-in gate.** `app.html` starts locked (`<body class="locked">`). Only a returning sign-in token or `?demo` unlocks it. This is a UI gate, not a server check: the app has no server and holds no data.
-- [ ] **REMOVE THE DEMO FROM THE LANDING PAGE before launch.** Demo is fine for now. Search for `TODO(remove-demo)`: three links in `src/ui/index.html` (nav "Demo", hero "Try the demo", footer link), one test line in `src/ui/landing.test.ts`, and the demo branch in `src/ui/app.html`. Decide at that time whether the `?demo` path itself stays for judges or goes.
+- [x] **Demo stays (decided 2026-11-23).** Judges may not be Google test users (testing mode allows only listed users), so `?demo` and a clear "Try the demo · no sign-in" button stay on the landing page. The demo never saves claims and never shares tips.
 - Hosting: GitHub Pages stays. Vercel's free Hobby plan is for personal, non-commercial use only; a hackathon project fits, a paid product would not.
 
 - [ ] **Hosted browser for real cancels (decide later).** The local bridge only works on the
@@ -186,3 +195,37 @@ Final frame: the hallway, four tombstones, $995.64/yr saved.
   Whatever is chosen, its secret lives in the host's SERVER-side settings, never in a `VITE_` variable.
   Hosting stays on GitHub Pages for now (free, already live). Vercel Hobby is free for
   personal, non-commercial use only.
+
+---
+
+## Design notes: tracking cancels and picking a cancel method (2026-11-22)
+
+**Standing rule from the user: do not open a pull request for a plan change. Open one only when asked.**
+
+### Did the user really cancel? Three levels of evidence
+We find a subscription because it sends receipts. So when its receipts stop, that is a real signal.
+
+| Level | Evidence | Label shown |
+|---|---|---|
+| Confirmed | A cancellation email arrived, or the user pressed "I cancelled it" and gave a date | "Cancelled" |
+| Likely | The expected receipt did not arrive: last receipt date + the usual gap (monthly: about 30 days, annual: about 365) + a 5-day grace | "Likely cancelled: no receipt since <date>" |
+| Verified | Confirmed or Likely, AND at least one full billing cycle passed with no new receipt | "Verified by email" |
+
+- Expected date comes from the receipt history (median gap between receipts, or `renewalDate` if the receipt gave one).
+- Savings are shown as two numbers: **Avoided so far** (missed renewals x amount, real evidence) and **Next 12 months** (an estimate, labelled as one).
+- A new receipt after cancel/verify turns the card into a **Revenant** (the dispute flow).
+- Known weak spots, say them in the UI: receipt moved or missed by the filter, billing through Apple/Google, payment failed or paused, sender changed, 13-month look-back for annual plans. When unsure show "Not sure yet", never a saving.
+- Later option: bank "card was charged" alert emails are readable with the same read-only access and would cover merchants that send no receipt. Formats differ by bank; do not promise it.
+
+### How to cancel? We often do not know, so show all ways, best guess first
+A "Cancel kit" per subscription with three tabs: Online, Email, Phone. Pick the first tab from what we know, with a label:
+1. The receipt has a manage or cancel link: Online tab first, "from your receipt".
+2. The receipt says call, or has a phone number near "cancel": Phone tab first, "from your receipt".
+3. The merchant is in a small hand-kept list (start with about 20): use that, "from our list".
+4. Otherwise: Online tab first with "We could not tell how this one works. Try these in order": the account page, a web search link for "<merchant> cancel subscription", then the Email draft, then the Phone script if a number is known.
+After the user finishes, ask "What worked?" (online, email, phone, other) so the card learns. Sharing that across users needs a server and is a later step.
+
+- **Owner decision, 2026-11-22: privacy exception ACCEPTED for shared cancel tips.** The one thing that leaves the browser is
+  {company website name, method (online/email/phone/other), worked yes/no}, sent only when the user ticks an opt-in box that
+  starts OFF. The server keeps counts per company, method and month, accepts only companies on a reviewed list, and never logs
+  bodies or IPs. `.kiro/steering/privacy.md` itself is unchanged. Spec: `docs/specs/build-wave-2026-11-22.md` section A.

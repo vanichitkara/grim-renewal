@@ -1,0 +1,13 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Palette guard",
+      "description": "After an animation or UI file is saved, check the newly added lines against .kiro/steering/animation.md: palette colours only, named easings only, no game engines, no smoothing.",
+      "trigger": "PostFileSave",
+      "matcher": "src/(animation|ui)/.*\\.ts$",
+      "action": { "type": "command", "command": "node scripts/hooks/palette-guard.mjs" },
+      "timeout": 20
+    }
+  ]
+}

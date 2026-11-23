@@ -1,5 +1,8 @@
 /**
- * Hallway orchestrator — owns the rAF loop and the animation state machine.
+ * Mansion orchestrator (file name kept: UI imports it) — owns the rAF loop and the
+ * animation state machine. The scene is a haunted mansion front: doors on two floors
+ * (ground, and an upper landing), 8 slots per page. The graveyard is a separate full-frame
+ * scene, shown only when there are trials.
  *
  * Rules (animation.md):
  * - State transitions fire ONLY in response to AgentEvents from the bus.
@@ -13,9 +16,15 @@ import { subscribe } from '../agents/event-bus.ts';
 import type { AgentEvent, Subscription } from '../types.ts';
 import { ease } from './ease.ts';
 import { tween as mkTween, tickTweens, wait } from './tween.ts';
+import type { TweenHandle } from './tween.ts';
 import { paintBg } from './background.ts';
 import { drawTorch, drawDoor } from './door.ts';
 import type { DoorSlotState } from './door.ts';
+import {
+  FLOOR, UPPER_FLOOR, PER_PAGE, slotPos, torchXs, pageCount, pageOf, clampPage, pageInfo,
+  travelKind, glideMs, pace,
+} from './layout.ts';
+import type { PageInfo } from './layout.ts';
 import { drawZombieFor } from './zombie.ts';
 import { drawGrave, drawFog, riseFor, upFor, cameraTarget } from './graveyard-scene.ts';
 import type { GraveState, View } from './graveyard-scene.ts';
@@ -29,22 +38,24 @@ import {
   spawnCoins,
   spawnSoul,
   spawnDirt,
+  spawnPuff,
   updateParticles,
   drawParticles,
 } from './particles.ts';
 import type { Particle } from './particles.ts';
-import { sfx, setMuted, isMuted, unlockAudio } from './sound.ts';
+import { sfx, setMuted, isMuted, unlockAudio, onSoundChange } from './sound.ts';
 
 // Canvas constants — 480×220, never scaled on the element itself.
 const W = 480;
 const H = 220;
-const WORLD = 800;
-const FLOOR = 184;
-const DOORS = [175, 260, 345, 430] as const;
-const GRAVES = [604, 684, 764] as const;
-const TORCH_X = [132, 217, 302, 387, 472] as const;
+/** The mansion front is world x 0..HALL, the yard the next 480 px. */
+const HALL = 480;
+const GRAVES = [640, 720, 800] as const;
 const DAY_MS = 86_400_000;
-const START_X = 50;
+/** Where the reaper rests between jobs. */
+const START_X = 20;
+
+export type { PageInfo };
 
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -73,10 +84,11 @@ interface SubSlot {
   queued: boolean;
 }
 
+/** One entry per non-trial subscription, in the order added. Index = slot number (see layout.ts). */
 let slots: SubSlot[] = [];
-/** Subs that did not fit on the 4 doors; promoted when a door's zombie is dead. */
-let overflow: Subscription[] = [];
-/** Every sub ever added (visible, overflow, dead-and-replaced). Used for stats and reset. */
+/** Always empty now (every sub gets a slot on some page). Kept so HordeView keeps its shape. */
+const overflow: Subscription[] = [];
+/** Every sub ever added. Used for stats and reset. */
 let known: Subscription[] = [];
 const cfgs = new Map<string, ZombieConfig>();
 /** Last cancel result per id, so a result that lands before the animation asks for it is not lost. */
@@ -85,8 +97,21 @@ let wired = false;
 let looping = false;
 let reaper: ReaperState;
 let particles: Particle[];
+/** 0-based page of the mansion being shown. */
+let page = 0;
+/** Page the user asked for while the reaper was busy; applied when the queue is idle. */
+let pendingPage: number | null = null;
+/** Extra speed for long queues (layout.pace). Divides every duration together with tune.speed. */
+let paceMul = 1;
+/** Page-turn fade, 0..1. */
+const pageFx = { a: 0 };
+/** Bumped by initHallway so a stale pump loop stops. */
+let gen = 0;
+let pagerEl: HTMLElement | null = null;
 let cam: { s: number; x: number; focus: number | null };
 let view: View = 'house';
+/** True while the camera cuts between the mansion and the yard. */
+let cutting = false;
 /** Simulated days added to the real clock (demo "Advance one day"). Real app: always 0. */
 let dayOffset = 0;
 let extraEaten = 0;
@@ -118,12 +143,14 @@ export interface TrialView {
 }
 
 export interface HordeView {
-  /** Subs with a door, in door order. */
+  /** Every non-trial sub, in slot order, across all pages. */
   visible: Subscription[];
-  /** Subs waiting for a free door ("more in the horde"). */
+  /** Always empty: every sub has a slot on some page. Kept for older callers. */
   overflow: Subscription[];
   /** Free trials at graves (at most 3 fit; shortcut: extra trials are ignored, add graves when needed). */
   trials: TrialView[];
+  /** Which page of the mansion is showing (1-based numbers). */
+  page: PageInfo;
 }
 let onChange: ((v: HordeView) => void) | null = null;
 
@@ -138,6 +165,7 @@ function notify(): void {
     visible: slots.map((s) => s.sub),
     overflow: [...overflow],
     trials: trials.map((t) => ({ sub: t.sub, days: t.days, status: t.g.status })),
+    page: pageInfo(slots.length, page),
   });
 }
 
@@ -169,8 +197,8 @@ function makeSlot(sub: Subscription, maxSpent: number): SubSlot {
 }
 
 /**
- * Add a discovered subscription: a door/zombie if one of the 4 doors is free,
- * otherwise it waits in the overflow list. Idempotent per id.
+ * Add a discovered subscription: it gets the next free slot (a ground or upper door,
+ * 8 per page). Idempotent per id.
  */
 export function addSubscription(sub: Subscription, config?: ZombieConfig): void {
   if (known.some((k) => k.id === sub.id) || trials.some((t) => t.sub.id === sub.id)) return;
@@ -180,12 +208,9 @@ export function addSubscription(sub: Subscription, config?: ZombieConfig): void 
     return;
   }
   known.push(sub);
-  if (slots.length < DOORS.length) {
-    slots.push(makeSlot(sub, Math.max(...known.map(spentOf))));
-    buildTags();
-  } else {
-    overflow.push(sub);
-  }
+  slots.push(makeSlot(sub, Math.max(...known.map(spentOf))));
+  buildTags();
+  updatePager();
   notify();
 }
 
@@ -217,20 +242,7 @@ function addTrial(sub: Subscription): void {
   notify();
 }
 
-/** Swap dead zombies for waiting overflow subs. Called when the queue is idle. */
-function promoteOverflow(): void {
-  let changed = false;
-  slots.forEach((s, i) => {
-    if (s.slot.status === 'dead' && overflow.length) {
-      slots[i] = makeSlot(overflow.shift()!, Math.max(...known.map(spentOf)));
-      changed = true;
-    }
-  });
-  if (changed) {
-    buildTags();
-    notify();
-  }
-}
+const slotIndex = (id: string) => slots.findIndex((s) => s.sub.id === id);
 
 // ---------- helpers ----------
 const money = (n: number) =>
@@ -245,11 +257,30 @@ function tw(
   ms: number,
   easeFn = ease.inOut,
 ) {
-  return mkTween(obj, key, to, ms, easeFn, tune.speed).promise;
+  const h = mkTween(obj, key, to, ms, easeFn, tune.speed * paceMul);
+  live.add(h);
+  // Mark the promise handled so a cancelled tween nobody awaits is not an unhandled rejection.
+  h.promise.then(() => live.delete(h), () => live.delete(h));
+  return h.promise;
 }
 
+/** Tweens in flight. Every one can be cancelled (animation.md: interruptible). */
+const live = new Set<TweenHandle>();
+
+/** Cancel every running tween. Awaiting sequences reject with AbortError and stop. */
+function cancelAllTweens(): void {
+  live.forEach((h) => h.cancel());
+}
+
+const isAbort = (e: unknown) => e instanceof DOMException && e.name === 'AbortError';
+
 function waitMs(ms: number) {
-  return wait(ms, tune.speed);
+  return wait(ms, tune.speed * paceMul);
+}
+
+/** Resolves once no tween is running (max ~1 s). Pages only turn after this. */
+async function settle(): Promise<void> {
+  for (let i = 0; i < 60 && live.size > 0; i++) await new Promise((r) => setTimeout(r, 16));
 }
 
 // ---------- DOM overlay helpers ----------
@@ -257,10 +288,12 @@ function buildTags(): void {
   wrapEl.querySelectorAll('.tag').forEach((t) => t.remove());
   tags = {};
   slots.forEach(({ sub }, i) => {
+    const pos = slotPos(i);
     const t = document.createElement('div');
     t.className = 'tag';
-    t.dataset['x'] = String(DOORS[i]!);
-    t.style.top = ((FLOOR - 66) / H * 100) + '%';
+    t.dataset['x'] = String(pos.cx);
+    t.dataset['page'] = String(pos.page);
+    t.style.top = (pos.tagY / H * 100) + '%';
     wrapEl.appendChild(t);
     tags[sub.id] = t;
     renderTag(sub.id);
@@ -277,12 +310,15 @@ function buildTags(): void {
   positionTags();
 }
 
-/** Tags live in world space: slide them with the camera, hide the off-screen ones. */
+/** Tags live in world space: slide them with the camera, hide the off-screen ones and other pages. */
 function positionTags(): void {
   wrapEl.querySelectorAll<HTMLElement>('.tag').forEach((t) => {
     const sx = (Number(t.dataset['x']) - cam.x) / W;
     t.style.left = (sx * 100) + '%';
-    t.hidden = sx < -0.15 || sx > 1.15;
+    const otherPage = t.dataset['page'] !== undefined && Number(t.dataset['page']) !== page;
+    // One scene at a time: slot tags belong to the mansion, trial tags to the yard.
+    const wrongScene = t.classList.contains('trial-tag') !== (cam.x >= HALL / 2);
+    t.hidden = otherPage || wrongScene || sx < -0.15 || sx > 1.15;
   });
 }
 
@@ -297,7 +333,7 @@ function trialStatusText(ts: TrialSlot): string {
     case 'converted': return 'Now charging ' + money(ts.sub.monthlyAmount) + '/mo';
     case 'cancelling': return 'Cancelling\u2026';
     case 'reaping':   return 'Reaping';
-    case 'dead':      return 'Cancelled \u00b7 +' + money0(ts.sub.monthlyAmount * 12) + '/yr';
+    case 'dead':      return 'Cancel sent. Waiting to verify';
     default:
       return days <= 0 ? 'Charges today' : days === 1 ? 'Charges tomorrow' : `Charges in ${days} days`;
   }
@@ -334,8 +370,27 @@ function mk(tag: string, text: string, cls?: string): HTMLElement {
   return el;
 }
 
+/**
+ * Status words the app gives the scene for a slot at rest (the same words as the card and the List).
+ * The scene keeps its own words only while the Reaper is acting on that slot.
+ */
+const restingLabel = new Map<string, string>();
+
+/**
+ * Show the app's status on a slot's tag, so the scene, the card and the List never disagree.
+ * Pass null to fall back to the scene's own words. Text only: it is set with textContent.
+ */
+export function setSlotLabel(id: string, label: string | null): void {
+  if (label === null || label.trim() === '') restingLabel.delete(id);
+  else restingLabel.set(id, label.slice(0, 80));
+  renderTag(id);
+}
+
 function statusText(slot: SubSlot): string {
   const { sub, slot: { status } } = slot;
+  const rest = restingLabel.get(sub.id);
+  // At rest, or after a result, the app's words win. Action words ("Knock, knock") stay the scene's.
+  if (rest && (status === 'idle' || status === 'dead' || status === 'boss')) return rest;
   switch (status) {
     case 'queued':     return 'Reaper on the way';
     case 'walking':    return 'Reaper approaching';
@@ -343,7 +398,8 @@ function statusText(slot: SubSlot): string {
     case 'opening':    return 'Something stirs';
     case 'cancelling': return 'Cancelling…';
     case 'reaping':    return 'Reaping';
-    case 'dead':       return 'Cancelled · +' + money0(sub.monthlyAmount * 12) + '/yr';
+    // No money here: savings count only when the evidence rules say so (the header shows them).
+    case 'dead':       return 'Cancel sent. Waiting to verify';
     case 'boss':       return 'Phone-only. Reaper fled.';
     default:           return 'Subscription active';
   }
@@ -373,6 +429,8 @@ function bubble(text: string | null): void {
 }
 
 function announce(text: string): void {
+  // The canvas label always says what is happening now (animation.md accessibility).
+  cv.setAttribute('aria-label', `Haunted mansion, page ${page + 1} of ${pageCount(slots.length)}. ${text}`);
   ariaLive.textContent = '';
   // Double-set forces screen-reader re-announcement.
   requestAnimationFrame(() => { ariaLive.textContent = text; });
@@ -407,55 +465,120 @@ function renderStats(): void {
   const leftEl = document.getElementById('left');
   const savedEl = document.getElementById('saved');
   const eatenEl = document.getElementById('eaten');
-  if (leftEl) leftEl.textContent = String(slots.filter((s) => s.slot.z.alive).length + overflow.length);
+  if (leftEl) leftEl.textContent = String(slots.filter((s) => s.slot.z.alive).length);
   if (eatenEl) eatenEl.textContent = money0(known.reduce((a, s) => a + s.totalSpent, 0) + extraEaten);
   if (savedEl) savedEl.textContent = money(savedShown);
 }
 
 // ---------- sequences — only fire after AgentEvent ----------
 
+const R = () => reaper as unknown as Record<string, number>;
+
+/** Plain walk. Only used for the Boss Door flee now. */
 async function walkTo(x: number, pxPerSec = 70): Promise<void> {
   const d = Math.abs(x - reaper.x);
   if (d < 1) return;
   reaper.facing = x > reaper.x ? 1 : -1;
   reaper.moving = true;
-  await tw(reaper as unknown as Record<string, number>, 'x', x, (d / pxPerSec) * 1000, ease.linear);
+  await tw(R(), 'x', x, (d / pxPerSec) * 1000, ease.linear);
   reaper.moving = false;
 }
 
-async function knockKnock(slot: DoorSlotState): Promise<void> {
-  for (let i = 0; i < tune.knocks; i++) {
-    await tw(reaper as unknown as Record<string, number>, 'knock', 1, 90, ease.out);
+/**
+ * Get the reaper to (x, lift): a short glide, or for a far target a blink
+ * (smoke out, smoke in). Both are tweens, so both can be cancelled.
+ */
+async function goTo(x: number, lift = 0): Promise<void> {
+  const kind = travelKind(reaper.x, reaper.lift, x, lift);
+  if (kind === 'none') return;
+  if (kind === 'glide') {
+    const d = Math.hypot(x - reaper.x, lift - reaper.lift);
+    reaper.facing = x >= reaper.x ? 1 : -1;
+    sfx.whoosh();
+    const ms = glideMs(d);
+    await Promise.all([tw(R(), 'x', x, ms, ease.out), tw(R(), 'lift', lift, ms, ease.out)]);
+    reaper.facing = 1;
+    return;
+  }
+  spawnPuff(particles, reaper.x, FLOOR - 24 - reaper.lift, reduceMotion);
+  sfx.whoosh();
+  await tw(R(), 'alpha', 0, 130, ease.in);
+  reaper.x = x;
+  reaper.lift = lift;
+  reaper.facing = 1;
+  spawnPuff(particles, x, FLOOR - 24 - lift, reduceMotion);
+  await tw(R(), 'alpha', 1, 150, ease.out);
+}
+
+/** Cut the camera to the other scene (mansion or yard) through a fade. */
+async function cutTo(x: number): Promise<void> {
+  cutting = true;
+  try {
+    await tw(pageFx as unknown as Record<string, number>, 'a', 1, 110, ease.in);
+    cam.x = x;
+    await tw(pageFx as unknown as Record<string, number>, 'a', 0, 130, ease.out);
+  } catch (e) {
+    if (!isAbort(e)) throw e;
+    pageFx.a = 0;
+  } finally {
+    cutting = false;
+  }
+}
+
+/** Turn the mansion to `p` (0-based) between sequences: waits for running tweens, fades. */
+async function turnPage(p: number): Promise<void> {
+  const target = clampPage(p, slots.length);
+  if (target === page) return;
+  await settle();
+  if (!reduceMotion) await tw(pageFx as unknown as Record<string, number>, 'a', 1, 110, ease.in);
+  page = target;
+  updatePager();
+  buildTags();
+  notify();
+  const info = pageInfo(slots.length, page);
+  announce(`Page ${info.page} of ${info.pages}. Subscriptions ${info.first} to ${info.last} of ${info.total}.`);
+  if (!reduceMotion) await tw(pageFx as unknown as Record<string, number>, 'a', 0, 130, ease.out);
+}
+
+async function showSlotPage(index: number): Promise<void> {
+  if (pageOf(index) !== page) await turnPage(pageOf(index));
+}
+
+async function knockKnock(slot: DoorSlotState, knocks: number): Promise<void> {
+  for (let i = 0; i < knocks; i++) {
+    await tw(R(), 'knock', 1, 90, ease.out);
     sfx.knock();
     slot.door.shake = 1;
-    await tw(reaper as unknown as Record<string, number>, 'knock', 0, 120);
+    await tw(R(), 'knock', 0, 120);
     await waitMs(170);
   }
 }
 
-async function kill(id: string, doorX: number): Promise<void> {
-  const s = slots.find((sl) => sl.sub.id === id)!;
+async function kill(id: string): Promise<void> {
+  const i = slotIndex(id);
+  const s = slots[i]!;
+  const pos = slotPos(i);
   const { slot, sub } = s;
   setStatus(id, 'reaping');
   bubble(null);
-  await tw(reaper as unknown as Record<string, number>, 'swing', 1, 200, ease.in);
+  await tw(R(), 'swing', 1, 200, ease.in);
   sfx.swing();
   flash = 0.8;
   if (!reduceMotion) cam.s = 3;
   slot.z.hit = 1;
-  spawnDissolve(particles, doorX, slot.z.scale * slot.z.grow, reduceMotion);
+  spawnDissolve(particles, pos.cx, slot.z.scale * slot.z.grow, reduceMotion, pos.feetY);
   sfx.dissolve();
   tw(slot.z as unknown as Record<string, number>, 'hit', 0, 250);
   await tw(slot.z as unknown as Record<string, number>, 'dissolve', 1, tune.dissolve, ease.out);
   slot.z.alive = false;
-  spawnCoins(particles, doorX, reduceMotion);
-  spawnSoul(particles, doorX);
+  spawnCoins(particles, pos.cx, reduceMotion, pos.feetY - 16, pos.feetY);
+  spawnSoul(particles, pos.cx, pos.feetY - 30);
   sfx.coin();
   const yearly = sub.monthlyAmount * 12;
-  floatText(doorX, FLOOR - 70, '+' + money(yearly) + '/yr');
+  floatText(pos.cx, pos.feetY - 70, '+' + money(yearly) + '/yr');
   savedTarget += yearly;
   renderStats();
-  await tw(reaper as unknown as Record<string, number>, 'swing', 0, 220);
+  await tw(R(), 'swing', 0, 220);
   sfx.creak();
   await tw(slot.door as unknown as Record<string, number>, 'open', 0, 320);
   await tw(slot as unknown as Record<string, number>, 'tomb', 1, 300, ease.back);
@@ -463,18 +586,25 @@ async function kill(id: string, doorX: number): Promise<void> {
 }
 
 async function reapOne(id: string): Promise<void> {
-  const s = slots.find((sl) => sl.sub.id === id)!;
+  const i = slotIndex(id);
+  const s = slots[i]!;
+  const pos = slotPos(i);
   const { slot, sub } = s;
-  const doorX = DOORS[slots.indexOf(s)]!;
   s.queued = false;
 
+  // Long queues play shorter and faster (layout.pace). The queue already lost this item.
+  const pc = pace(queue.length + 1, tune.knocks);
+  paceMul = pc.speed;
+
+  // Approach starts here, on `approved` (the enqueue gate), never earlier.
+  await showSlotPage(i);
   setStatus(id, 'walking');
-  await walkTo(doorX - 40);
+  await goTo(pos.reaperX, pos.reaperLift);
   reaper.facing = 1;
   setStatus(id, 'knocking');
   bubble('Knock knock');
 
-  await knockKnock(slot);
+  await knockKnock(slot, pc.knocks);
   bubble(null);
   setStatus(id, 'opening');
   sfx.creak();
@@ -492,7 +622,7 @@ async function reapOne(id: string): Promise<void> {
   const result = await waitForCancelResult(id);
 
   if (result.ok) {
-    await kill(id, doorX);
+    await kill(id);
   } else {
     bubble(null);
     setStatus(id, 'boss');
@@ -505,13 +635,38 @@ async function reapOne(id: string): Promise<void> {
     await waitMs(650);
     bubble(null);
     reaper.run = true;
+    if (reaper.lift > 0) await tw(R(), 'lift', 0, 260, ease.in); // drops to the ground to run
     await walkTo(-30, 260);
     reaper.run = false;
     showBoss(id, result.reason);
     await waitMs(900);
     reaper.scared = false;
-    await walkTo(START_X);
+    await goTo(START_X, 0);
     reaper.facing = 1;
+  }
+}
+
+/** Coins drop from a slot when its savings are verified. UI calls celebrateVerified(id). */
+async function celebrate(id: string): Promise<void> {
+  const i = slotIndex(id);
+  if (i >= 0) {
+    const pos = slotPos(i);
+    const s = slots[i]!;
+    await showSlotPage(i);
+    sfx.coin();
+    spawnCoins(particles, pos.cx, reduceMotion, pos.feetY - 40, pos.feetY);
+    floatText(pos.cx, pos.feetY - 70, 'Verified');
+    announce(`${s.sub.merchant}: savings verified.`);
+    await waitMs(900);
+    return;
+  }
+  const ts = trials.find((t) => t.sub.id === id);
+  if (ts) {
+    sfx.coin();
+    spawnCoins(particles, ts.g.x, reduceMotion, FLOOR - 40);
+    floatText(ts.g.x, FLOOR - 70, 'Verified');
+    announce(`${ts.sub.merchant}: savings verified.`);
+    await waitMs(900);
   }
 }
 
@@ -529,7 +684,7 @@ async function trialFailed(ts: TrialSlot, back: string, reason?: string): Promis
   ts.queued = false;
   setTrialStatus(ts, back);
   announce(`Could not cancel ${ts.sub.merchant}${reason ? ': ' + reason : ''}.`);
-  await walkTo(START_X);
+  await goTo(START_X, 0);
   reaper.facing = 1;
 }
 
@@ -538,8 +693,9 @@ async function buryTrial(ts: TrialSlot): Promise<void> {
   const { g, sub } = ts;
   const zr = g.z as unknown as Record<string, number>;
   const gr = g as unknown as Record<string, number>;
+  paceMul = 1;
   setTrialStatus(ts, 'walking');
-  await walkTo(g.x - 30);
+  await goTo(g.x - 30, 0);
   reaper.facing = 1;
   setTrialStatus(ts, 'burying');
   bubble('Not today.');
@@ -588,8 +744,9 @@ async function riseTrial(ts: TrialSlot): Promise<void> {
 async function reapTrial(ts: TrialSlot): Promise<void> {
   const { g, sub } = ts;
   const z = g.z as unknown as Record<string, number>;
+  paceMul = 1;
   setTrialStatus(ts, 'walking');
-  await walkTo(g.x - 36);
+  await goTo(g.x - 36, 0);
   reaper.facing = 1;
   setTrialStatus(ts, 'cancelling');
   bubble('Your trial is over.');
@@ -656,8 +813,11 @@ export function advanceDay(): void {
   syncDays();
 }
 
+/** Show the mansion or the yard. With no trials there is no yard: asking for it does nothing. */
 export function setView(v: View): void {
+  if (v === 'yard' && trials.length === 0) return;
   view = v;
+  updatePager();
   document.getElementById('viewHouse')?.setAttribute('aria-pressed', String(v === 'house'));
   document.getElementById('viewYard')?.setAttribute('aria-pressed', String(v === 'yard'));
 }
@@ -671,25 +831,33 @@ function renderClock(): void {
 }
 
 async function finishBoss(id: string): Promise<void> {
-  const s = slots.find((sl) => sl.sub.id === id)!;
-  const doorX = DOORS[slots.indexOf(s)]!;
+  const i = slotIndex(id);
+  const s = slots[i]!;
+  const pos = slotPos(i);
   document.getElementById('boss')!.hidden = true;
+  paceMul = 1;
+  await showSlotPage(i);
   setStatus(id, 'walking');
   bubble("Oh, it\u2019s cancelled?");
-  await walkTo(doorX - 40);
+  await goTo(pos.reaperX, pos.reaperLift);
   reaper.facing = 1;
   bubble("Then you\u2019re mine.");
   await tw(s.slot.z as unknown as Record<string, number>, 'grow', 1, 500);
   await waitMs(400);
-  await kill(id, doorX);
+  await kill(id);
 }
 
-/** A charge came back: the tombstone sinks, the door opens, the zombie rises again. */
+/**
+ * A charge came back: the tombstone sinks, the door opens, the zombie rises again (either floor).
+ */
 async function riseAgain(id: string): Promise<void> {
-  const s = slots.find((sl) => sl.sub.id === id);
+  const i = slotIndex(id);
+  const s = slots[i];
   if (!s || s.slot.status !== 'dead') return;
   const { slot, sub } = s;
   const z = slot.z as unknown as Record<string, number>;
+  paceMul = 1;
+  await showSlotPage(i);
   setStatus(id, 'opening');
   await tw(slot as unknown as Record<string, number>, 'tomb', 0, 300, ease.in);
   sfx.creak();
@@ -797,13 +965,103 @@ export function enqueue(id: string): void {
 async function pump(): Promise<void> {
   if (busy) return;
   busy = true;
-  while (queue.length) {
-    await queue.shift()!();
+  const g = gen;
+  while (queue.length && g === gen) {
+    try {
+      await queue.shift()!();
+    } catch (e) {
+      // A cancelled tween (Reset) ends its sequence quietly; anything else is a bug worth seeing.
+      if (!isAbort(e)) console.error('[hallway] sequence failed', e);
+    }
   }
+  if (g !== gen) return; // the scene was reset under us; the new scene owns `busy` now
   busy = false;
   bubble(null);
+  paceMul = 1;
   setMachineDisplay('idle', '');
-  promoteOverflow();
+  if (pendingPage !== null) {
+    const p = pendingPage;
+    pendingPage = null;
+    await turnPage(p);
+  }
+}
+
+// ---------- paging (public API) ----------
+
+/** Which page is showing. Page numbers are 1-based. */
+export function getPageInfo(): PageInfo {
+  return pageInfo(slots.length, page);
+}
+
+/**
+ * Show page n (1-based). While the reaper is working the turn waits until the queue is idle,
+ * because the scene follows the reaper and never turns under a running tween.
+ */
+export function setPage(n: number): void {
+  const target = clampPage(n - 1, slots.length);
+  if (busy) {
+    pendingPage = target;
+    announce('The page will turn when the Reaper finishes.');
+    return;
+  }
+  void turnPage(target);
+}
+
+/** Gold coins drop from this subscription's slot (the UI calls it when savings reach Verified). */
+export function celebrateVerified(id: string): void {
+  queue.push(() => celebrate(id));
+  void pump();
+}
+
+const PAGER_CSS = `
+.pager { position: absolute; left: 50%; top: 2px; transform: translateX(-50%); display: flex; gap: 6px; align-items: center;
+  font-family: var(--display, monospace); font-size: clamp(9px, 1.5vw, 13px); color: var(--bone, #ece6d6);
+  background: rgba(18, 14, 28, 0.82); border: 1px solid var(--stone, #2a2240); border-radius: 3px; padding: 1px 6px; }
+.pager[hidden] { display: none; }
+.pager button { min-width: 26px; padding: 0 6px; background: var(--crypt, #1c162b); color: var(--bone, #ece6d6);
+  border: 1px solid var(--stone, #2a2240); border-radius: 2px; cursor: pointer; font: inherit; }
+.pager button:disabled { opacity: 0.4; cursor: default; }
+.pager button:focus-visible { outline: 2px solid var(--coin, #f2b84b); outline-offset: 1px; }`;
+
+/** Prev / next arrows and a "Page 1 of 2" label on the stage. Built once, reused after a reset. */
+function ensurePager(): void {
+  if (!document.getElementById('pagerStyle')) {
+    const st = document.createElement('style');
+    st.id = 'pagerStyle';
+    st.textContent = PAGER_CSS;
+    document.head.appendChild(st);
+  }
+  pagerEl = document.getElementById('pager');
+  if (pagerEl) return;
+  const el = document.createElement('div');
+  el.id = 'pager';
+  el.className = 'pager';
+  el.setAttribute('role', 'group');
+  el.setAttribute('aria-label', 'Mansion pages');
+  const mkBtn = (id: string, label: string, text: string, step: number) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.id = id;
+    b.setAttribute('aria-label', label);
+    b.textContent = text;
+    b.addEventListener('click', () => setPage(page + 1 + step));
+    return b;
+  };
+  const lab = document.createElement('span');
+  lab.id = 'pagerLabel';
+  el.append(mkBtn('pagerPrev', 'Previous page', '\u25c0', -1), lab, mkBtn('pagerNext', 'Next page', '\u25b6', 1));
+  wrapEl.appendChild(el);
+  pagerEl = el;
+}
+
+function updatePager(): void {
+  if (!pagerEl) return;
+  const pages = pageCount(slots.length);
+  pagerEl.hidden = pages <= 1 || view === 'yard';
+  const lab = document.getElementById('pagerLabel');
+  if (lab) lab.textContent = `Page ${page + 1} of ${pages}`;
+  (document.getElementById('pagerPrev') as HTMLButtonElement | null)?.toggleAttribute('disabled', page <= 0);
+  (document.getElementById('pagerNext') as HTMLButtonElement | null)?.toggleAttribute('disabled', page >= pages - 1);
 }
 
 // ---------- bus subscriptions ----------
@@ -865,10 +1123,15 @@ function update(dt: number, now: number): void {
     reaperX: reaper.x,
     reaperBusy: busy,
     view,
+    hallW: HALL,
     viewW: W,
-    worldW: WORLD,
+    hasYard: trials.length > 0,
   });
-  cam.x += (target - cam.x) * Math.min(1, dt * (reduceMotion ? 20 : 3.5));
+  // The camera never rests between the scenes: it cuts, through a short fade.
+  if (target !== cam.x && !cutting) {
+    if (reduceMotion) cam.x = target;
+    else void cutTo(target);
+  }
   flash = Math.max(0, flash - dt * 3);
   updateParticles(particles, dt);
   savedShown += (savedTarget - savedShown) * Math.min(1, dt * 6);
@@ -884,27 +1147,42 @@ function draw(t: number): void {
     );
   }
 
+  // One scene fills the frame: clip to it so camera shake never shows the other one.
   ctx.translate(-Math.round(cam.x), 0);
-  ctx.drawImage(bg, 0, 0);
+  ctx.beginPath();
+  ctx.rect(Math.round(cam.x), 0, W, H);
+  ctx.clip();
+  const yardScene = cam.x >= HALL / 2;
+  // No trials, no yard: only the mansion half of the background is ever drawn.
+  if (trials.length > 0) ctx.drawImage(bg, 0, 0);
+  else ctx.drawImage(bg, 0, 0, HALL, H, 0, 0, HALL, H);
 
-  TORCH_X.forEach((x) => drawTorch(ctx, x, t));
+  if (!yardScene) {
+    torchXs().forEach((x) => { drawTorch(ctx, x, t); drawTorch(ctx, x, t + 1.7, UPPER_FLOOR); });
 
-  // Door pass 1: frame + peek zombie
-  slots.forEach((s, i) => {
-    drawDoor(ctx, DOORS[i]!, s.slot, t, (cx, slot, time) => {
-      drawZombieFor(ctx, cx, slot, s.config, time);
-    });
-  });
-
-  // Door pass 2: fully emerged zombies (drawn above door)
-  slots.forEach((s, i) => {
-    if (s.slot.z.out > 0.5 && s.slot.z.alive) {
-      drawZombieFor(ctx, DOORS[i]!, s.slot, s.config, t);
+    // The page's slots: a ground door and an upper door per column. At most PER_PAGE are drawn.
+    const first = page * PER_PAGE;
+    for (let local = 0; local < PER_PAGE; local++) {
+      const s = slots[first + local];
+      if (!s) continue;
+      const pos = slotPos(first + local);
+      // Door pass 1: frame + peek zombie
+      drawDoor(ctx, pos.cx, s.slot, t, (cx, slot, time) => {
+        drawZombieFor(ctx, cx, slot, s.config, time, { y: pos.feetY });
+      }, pos.feetY);
     }
-  });
-
-  trials.forEach(({ g }) => drawGrave(ctx, g, t));
-  drawFog(ctx, t);
+    // Door pass 2: fully emerged zombies (drawn above the door)
+    for (let local = 0; local < PER_PAGE; local++) {
+      const s = slots[first + local];
+      if (s && s.slot.z.out > 0.5 && s.slot.z.alive) {
+        const pos = slotPos(first + local);
+        drawZombieFor(ctx, pos.cx, s.slot, s.config, t, { y: pos.feetY });
+      }
+    }
+  } else {
+    trials.forEach(({ g }) => drawGrave(ctx, g, t));
+    drawFog(ctx, t, HALL);
+  }
 
   drawReaper(ctx, reaper, t);
   drawParticles(ctx, particles, t);
@@ -914,7 +1192,7 @@ function draw(t: number): void {
     ctx.strokeStyle = `rgba(236,230,214,${0.8 * (1 - reaper.swing)})`;
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.arc(reaper.x + 4 * reaper.facing, FLOOR - 26, 22, -1.2, 1.0);
+    ctx.arc(reaper.x + 4 * reaper.facing, FLOOR - 26 - reaper.lift, 22, -1.2, 1.0);
     ctx.stroke();
   }
 
@@ -931,6 +1209,10 @@ function draw(t: number): void {
     ctx.fillStyle = `rgba(255,255,255,${flash * 0.35})`;
     ctx.fillRect(0, 0, W, H);
   }
+  if (pageFx.a > 0.01) {
+    ctx.fillStyle = `rgba(18,14,28,${pageFx.a})`; // --night, the page-turn fade
+    ctx.fillRect(0, 0, W, H);
+  }
 }
 
 function frame(now: number): void {
@@ -941,8 +1223,10 @@ function frame(now: number): void {
 
   // Bubble tracks reaper
   if (!bubbleEl.hidden) {
-    bubbleEl.style.left = ((reaper.x - cam.x) / W * 100) + '%';
-    bubbleEl.style.top = ((FLOOR - 52) / H * 100) + '%';
+    // Keep the bubble on the stage even when the reaper stands at the left or right edge.
+    const bx = Math.min(W - 70, Math.max(70, reaper.x - cam.x));
+    bubbleEl.style.left = (bx / W * 100) + '%';
+    bubbleEl.style.top = ((FLOOR - 52 - reaper.lift) / H * 100) + '%';
   }
 
   positionTags();
@@ -982,17 +1266,24 @@ export function initHallway(
     document.body.appendChild(ariaLive);
   }
 
-  void loadSprites(); // sprites swap in when ready; rectangles until then
+  // Stop whatever the old scene was doing before it is replaced.
+  gen++;
+  cancelAllTweens();
+  void loadSprites().then(() => { bg = paintBg(); }); // sprites swap in when ready; rectangles until then
   bg = paintBg();
 
   slots = [];
-  overflow = [];
   known = [];
   cfgs.clear();
   results.clear();
-  reaper = { x: START_X, facing: 1, walk: 0, moving: false, knock: 0, swing: 0, scared: false, run: false };
+  page = 0;
+  pendingPage = null;
+  paceMul = 1;
+  pageFx.a = 0;
+  reaper = { x: START_X, facing: 1, walk: 0, moving: false, knock: 0, swing: 0, scared: false, run: false, lift: 0, alpha: 1 };
   particles = [];
   cam = { s: 0, x: 0, focus: null };
+  cutting = false;
   view = 'house';
   dayOffset = 0;
   extraEaten = 0;
@@ -1015,12 +1306,11 @@ export function initHallway(
   known = known.filter((k) => !trialSubs.includes(k));
   const doorSubs = known;
   const maxSpent = doorSubs.length ? Math.max(...doorSubs.map(spentOf)) : 0;
-  doorSubs.forEach((sub) => {
-    if (slots.length < DOORS.length) slots.push(makeSlot(sub, maxSpent));
-    else overflow.push(sub);
-  });
+  doorSubs.forEach((sub) => slots.push(makeSlot(sub, maxSpent)));
   trialSubs.forEach(addTrial);
   renderClock();
+  ensurePager();
+  updatePager();
 
   buildTags();
   wireBus();
@@ -1047,12 +1337,14 @@ export function initHallway(
     });
 
     const muteBtn = document.getElementById('mute') as HTMLButtonElement | null;
-    muteBtn?.addEventListener('click', () => {
-      const next = !isMuted();
-      setMuted(next);
-      muteBtn.textContent = next ? 'Sound off' : 'Sound on';
-      muteBtn.setAttribute('aria-pressed', String(next));
-    });
+    const paintMute = (m: boolean): void => {
+      if (!muteBtn) return;
+      muteBtn.textContent = m ? 'Sound off' : 'Sound on';
+      muteBtn.setAttribute('aria-pressed', String(m));
+    };
+    paintMute(isMuted()); // the saved setting from Settings
+    onSoundChange((s) => paintMute(s.muted));
+    muteBtn?.addEventListener('click', () => setMuted(!isMuted()));
 
     document.getElementById('copyScript')?.addEventListener('click', () => {
       const txt = document.getElementById('bossScript');

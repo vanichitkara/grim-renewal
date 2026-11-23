@@ -10,7 +10,11 @@ These rules are non-negotiable. Every agent that touches email or user data must
 - Never log message bodies, subject lines, or sender email addresses beyond what is in the Subscription record.
 
 ## Storage
-- Do NOT persist OAuth tokens to disk. Hold them in memory for the session only.
+- OAuth sign-in lasts until the user signs out (owner ruling, 2026-11-23). The `gmail.readonly`
+  access token may be kept in the browser's localStorage (`grim_auth`, via `src/pipeline/session-auth.ts`)
+  until Google's own expiry (about 1 hour). After that, re-auth silently with `prompt=none`; never ask for
+  a refresh token or offline access. Never write the token to a server, a file, or a log.
+- Settings → Sign out must revoke the token at Google and clear `grim_auth` and the account's saved data.
 - Subscription records may be persisted to localStorage (browser) or a local SQLite file.
 - Never send subscription data to any third-party endpoint.
 - Never store: message IDs, thread IDs, full email addresses beyond `accountEmail` on the subscription record.

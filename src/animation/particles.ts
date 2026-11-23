@@ -17,8 +17,10 @@ export interface Particle {
   max: number;
   size: number;
   color: string;
-  kind: 'dust' | 'coin' | 'soul' | 'dirt';
+  kind: 'dust' | 'coin' | 'soul' | 'dirt' | 'puff';
   bounced?: boolean;
+  /** Y where a coin or dirt bounces (default: the ground line). Upper-landing coins land on the landing. */
+  floorY?: number;
   seed?: number;
 }
 
@@ -27,12 +29,13 @@ export function spawnDissolve(
   cx: number,
   scale: number,
   reduceMotion: boolean,
+  baseY = FLOOR,
 ): void {
   const n = reduceMotion ? 18 : 60;
   for (let k = 0; k < n; k++) {
     particles.push({
       x: cx - 8 + (Math.random() - 0.5) * 18 * scale,
-      y: FLOOR - Math.random() * 34 * scale,
+      y: baseY - Math.random() * 34 * scale,
       vx: (Math.random() - 0.5) * 20,
       vy: -10 - Math.random() * 40,
       g: -15,
@@ -49,12 +52,14 @@ export function spawnCoins(
   particles: Particle[],
   cx: number,
   reduceMotion: boolean,
+  y = FLOOR - 16,
+  floorY = FLOOR,
 ): void {
   const n = reduceMotion ? 4 : 10;
   for (let k = 0; k < n; k++) {
     particles.push({
       x: cx - 6,
-      y: FLOOR - 16,
+      y,
       vx: (Math.random() - 0.5) * 90,
       vy: -90 - Math.random() * 60,
       g: 320,
@@ -64,6 +69,7 @@ export function spawnCoins(
       color: '#f2b84b',
       kind: 'coin',
       bounced: false,
+      floorY,
     });
   }
 }
@@ -88,10 +94,10 @@ export function spawnDirt(particles: Particle[], cx: number, reduceMotion: boole
   }
 }
 
-export function spawnSoul(particles: Particle[], cx: number): void {
+export function spawnSoul(particles: Particle[], cx: number, y = FLOOR - 30): void {
   particles.push({
     x: cx - 6,
-    y: FLOOR - 30,
+    y,
     vx: 0,
     vy: -22,
     g: 0,
@@ -104,6 +110,12 @@ export function spawnSoul(particles: Particle[], cx: number): void {
   });
 }
 
+/** One smoke puff for the reaper's blink. Skipped under reduced motion. */
+export function spawnPuff(particles: Particle[], x: number, y: number, reduceMotion: boolean): void {
+  if (reduceMotion) return;
+  particles.push({ x, y, vx: 0, vy: -6, g: 0, life: 0, max: 0.45, size: 0, color: '#a59cbc', kind: 'puff' });
+}
+
 /** Advance all particles one physics step. Removes expired entries in-place. */
 export function updateParticles(particles: Particle[], dt: number): void {
   for (let i = particles.length - 1; i >= 0; i--) {
@@ -112,8 +124,9 @@ export function updateParticles(particles: Particle[], dt: number): void {
     p.vy += p.g * dt;
     p.x += p.vx * dt;
     p.y += p.vy * dt;
-    if ((p.kind === 'coin' || p.kind === 'dirt') && p.y > FLOOR - 2) {
-      p.y = FLOOR - 2;
+    const land = (p.floorY ?? FLOOR) - 2;
+    if ((p.kind === 'coin' || p.kind === 'dirt') && p.y > land) {
+      p.y = land;
       if (!p.bounced) {
         p.vy *= -0.45;
         p.vx *= 0.6;
@@ -138,7 +151,16 @@ export function drawParticles(
     ctx.globalAlpha = a;
     const ghostS = p.kind === 'soul' ? getSprite('ghost') : null;
     const coinS = p.kind === 'coin' ? getSprite('coin') : null;
-    if (ghostS) {
+    const smokeS = p.kind === 'puff' ? getSprite('smoke') : null;
+    if (p.kind === 'puff') {
+      if (smokeS) {
+        drawFrame(ctx, smokeS, Math.min(smokeS.def.frames - 1, Math.floor((p.life / p.max) * smokeS.def.frames)), p.x - 8, p.y - 8);
+      } else {
+        const r = 3 + Math.round((p.life / p.max) * 5);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(Math.round(p.x) - r, Math.round(p.y) - r, r * 2, r * 2);
+      }
+    } else if (ghostS) {
       const sx = Math.round(p.x + Math.sin(t * 4 + (p.seed ?? 0)) * 3);
       drawFrame(ctx, ghostS, frameIndex(t, 4, ghostS.def.frames, true), sx - 1, Math.round(p.y));
     } else if (coinS) {

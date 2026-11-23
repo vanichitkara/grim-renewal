@@ -19,6 +19,10 @@ export interface ReaperState {
   swing: number;    // 0–1 scythe swing
   scared: boolean;
   run: boolean;
+  /** Pixels above the ground pose (hovering beside an upper window). */
+  lift: number;
+  /** 0 hidden (mid-blink) to 1 solid. */
+  alpha: number;
 }
 
 export function drawReaper(
@@ -32,8 +36,10 @@ export function drawReaper(
     : Math.sin(t * 2) * 1.2;
   const jitter = R.scared ? (Math.random() - 0.5) * 2 : 0;
 
+  if (R.alpha <= 0.01) return;
   ctx.save();
-  ctx.translate(Math.round(R.x + jitter), Math.round(FLOOR - 2 + bob));
+  ctx.globalAlpha = R.alpha;
+  ctx.translate(Math.round(R.x + jitter), Math.round(FLOOR - 2 + bob - R.lift));
   ctx.scale(R.facing, 1);
 
   if (drawReaperSprite(ctx, R, t)) {

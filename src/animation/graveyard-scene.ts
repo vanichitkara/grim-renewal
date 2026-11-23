@@ -37,19 +37,26 @@ export interface CameraInput {
   reaperX: number;
   reaperBusy: boolean;
   view: View;
+  /** Width of the mansion front. The yard is the next viewW pixels of the world. */
+  hallW: number;
   viewW: number;
-  worldW: number;
+  /** False when there are no trials: then the camera never leaves the mansion. */
+  hasYard: boolean;
 }
 
-/** World x of the camera's left edge it should ease toward. Clamped to the world. */
+/**
+ * World x of the camera's left edge. The camera shows exactly one scene, edge to edge:
+ * the mansion front (0) or the yard (hallW). It never rests between them, so no doors show in
+ * the yard and no yard shows at the mansion. Priority: focus point, busy reaper, chosen view.
+ */
 export function cameraTarget(i: CameraInput): number {
-  const max = i.worldW - i.viewW;
-  const raw =
-    i.focus !== null ? i.focus - i.viewW / 2
-    : i.reaperBusy ? i.reaperX - i.viewW / 2
-    : i.view === 'yard' ? max
+  if (!i.hasYard) return 0;
+  const at =
+    i.focus !== null ? i.focus
+    : i.reaperBusy ? i.reaperX
+    : i.view === 'yard' ? i.hallW
     : 0;
-  return Math.min(max, Math.max(0, raw));
+  return at >= i.hallW ? i.hallW : 0;
 }
 
 const rect = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, c: string) => {
@@ -128,12 +135,12 @@ export function drawGrave(ctx: CanvasRenderingContext2D, g: GraveState, t: numbe
   }
 }
 
-/** Low drifting mist over the yard (world x 520..800). */
-export function drawFog(ctx: CanvasRenderingContext2D, t: number): void {
+/** Low drifting mist over the yard (world x0..x0+480). */
+export function drawFog(ctx: CanvasRenderingContext2D, t: number, x0 = 480): void {
   ctx.save();
   ctx.fillStyle = '#c8c8e0';
   for (let k = 0; k < 5; k++) {
-    const x = 520 + ((t * (6 + k * 2) + k * 61) % 280) - 20;
+    const x = x0 + 40 + ((t * (6 + k * 2) + k * 61) % 400);
     ctx.globalAlpha = 0.05 + 0.02 * Math.sin(t + k);
     ctx.beginPath();
     ctx.ellipse(x, FLOOR - 3 - (k % 2) * 3, 34, 4, 0, 0, Math.PI * 2);

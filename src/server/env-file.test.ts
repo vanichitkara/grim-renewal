@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { parseEnv, upsertEnv, isValidBridgeKey } from './env-file.ts';
-import { bridgeDefine } from './dev-env.ts';
+import { bridgeDefine, communityDefine } from './dev-env.ts';
 
 describe('parseEnv', () => {
   it('reads keys, skips comments and blanks, strips quotes', () => {
@@ -37,5 +37,22 @@ describe('bridgeDefine: the key reaches the page only from the dev server', () =
   });
   it('injects nothing for a malformed key', () => {
     expect(bridgeDefine('serve', { GRIM_BRIDGE_TOKEN: 'x y' }).__GRIM_DEV_BRIDGE_TOKEN__).toBe('""');
+  });
+});
+
+describe('communityDefine: the shared-tips address', () => {
+  it('is off when unset', () => {
+    expect(communityDefine({}).__GRIM_COMMUNITY_URL__).toBe('""');
+  });
+  it('accepts https and strips trailing slashes', () => {
+    expect(communityDefine({ GRIM_COMMUNITY_URL: 'https://tips.example.app/' }).__GRIM_COMMUNITY_URL__).toBe('"https://tips.example.app"');
+  });
+  it('accepts http only on the developer machine', () => {
+    expect(communityDefine({ GRIM_COMMUNITY_URL: 'http://127.0.0.1:8788' }).__GRIM_COMMUNITY_URL__).toBe('"http://127.0.0.1:8788"');
+    expect(communityDefine({ GRIM_COMMUNITY_URL: 'http://tips.example.app' }).__GRIM_COMMUNITY_URL__).toBe('""');
+  });
+  it('rejects odd values', () => {
+    expect(communityDefine({ GRIM_COMMUNITY_URL: 'javascript:alert(1)' }).__GRIM_COMMUNITY_URL__).toBe('""');
+    expect(communityDefine({ GRIM_COMMUNITY_URL: 'https://a b' }).__GRIM_COMMUNITY_URL__).toBe('""');
   });
 });

@@ -21,6 +21,7 @@ const PAL: Record<string, string> = {
   E: '#f5e663', M: '#2a1a1a', W: '#e9e9e9', P: '#3d3550', B: '#241f30',
   Y: '#f2b84b', H: '#fff3c4', y: '#d9b25a',               // coin gold, shine, shade
   G: '#6f6a80', L: '#8a85a0', X: '#3f3b4f',               // tombstone
+  a: '#211a33', A: '#1b1529',                              // mansion brick, mortar
   n: '#3b2a20', N: '#4d382a', v: '#07050c', q: '#6e4a2f', Q: '#5e3f28', r: '#4e3420', // door
 };
 // 'T' = shirt marker. zombie.ts recolours it per subscription.
@@ -186,6 +187,49 @@ const ghost = [
   ['.bbbbb.', 'bbbbbbb', 'bbobobb', 'bbbbbbb', 'bbbbbbb', 'dbdbdbd', '.b.b.b.'],
 ].map(fromRows);
 
+
+// ---------- mansion: upper landing, wall tile, smoke ----------
+/**
+ * 16x22 tile of the upper landing, repeated across the wall. Rows 0-13: a balustrade
+ * (top bar, two posts, see-through between). Rows 14-21: the stone ledge the upper doors stand on.
+ * The ledge top (row 14) is the floor line of the upper floor.
+ */
+function landingTile(): Grid {
+  const g = mk(16, 22);
+  rect(g, 0, 0, 16, 2, 'c'); rect(g, 0, 2, 16, 1, 'm');         // handrail
+  for (const x of [1, 9]) { rect(g, x, 3, 3, 11, 'm'); rect(g, x, 3, 1, 11, 'c'); rect(g, x + 2, 3, 1, 11, 'k'); }
+  rect(g, 0, 14, 16, 1, 'c');                                    // lit top edge
+  rect(g, 0, 15, 16, 4, 'm');
+  for (let x = 0; x < 16; x += 8) rect(g, x + 7, 15, 1, 4, 'k'); // stone joints
+  rect(g, 0, 19, 16, 1, 'k'); rect(g, 0, 20, 16, 2, 'o');       // shaded underside
+  return g;
+}
+/** 16x16 brick tile (same look as the old hallway wall). */
+function wallTile(): Grid {
+  const g = mk(16, 16);
+  rect(g, 0, 0, 16, 16, 'A');
+  for (let row = 0; row < 2; row++) {
+    const off = row * 8;
+    for (let x = 0; x < 16; x++) {
+      const bx = (x - off + 16) % 16;
+      if (bx >= 1 && bx <= 14) for (let y = 1; y <= 6; y++) px(g, x, row * 8 + y, 'a');
+    }
+  }
+  return g;
+}
+/** Blink smoke: four frames growing, then thinning out. */
+function smoke(k: number): Grid {
+  const g = mk(16, 16);
+  const r = [3, 5, 7, 8][k]!;
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    const d = Math.hypot(x - 7.5, y - 7.5);
+    if (d > r) continue;
+    if (k >= 2 && (x * 3 + y * 5 + k) % (k === 2 ? 4 : 2) === 0) continue; // holes as it fades
+    px(g, x, y, d > r - 1.5 ? 'c' : (x + y) % 5 === 0 ? 'b' : 'd');
+  }
+  return g;
+}
+
 // ---------- sprite list (file name -> frames) ----------
 const SPRITES: Record<string, Grid[]> = {
   reaper_idle: reaperIdle,
@@ -198,6 +242,9 @@ const SPRITES: Record<string, Grid[]> = {
   door_frame: [doorFrame()],
   door_panel: [doorPanel()],
   tombstone: [tombstone],
+  landing: [landingTile()],
+  mansion_wall: [wallTile()],
+  smoke: [0, 1, 2, 3].map(smoke),
   coin,
   ghost,
 };

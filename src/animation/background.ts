@@ -3,9 +3,12 @@
  * Call paintBg() once; blit the returned canvas every frame with drawImage().
  */
 
-/** Hallway spans x 0..HALL; the world (hallway + archway + yard) is WORLD wide. */
-const HALL = 500;
-const WORLD = 800;
+import { getSprite } from './sprites.ts';
+import { UPPER_FLOOR } from './layout.ts';
+
+/** The mansion front is world x 0..HALL; the yard is the next 480 px. The camera shows one of them at a time. */
+const HALL = 480;
+const WORLD = 960;
 const H = 220;
 const FLOOR = 184;
 
@@ -15,82 +18,89 @@ export function paintBg(): HTMLCanvasElement {
   bg.height = H;
   const b = bg.getContext('2d')!;
 
-  // Upper wall — brick tiles
+  paintMansion(b);
+  paintYard(b);
+  return bg;
+}
+
+/** Mansion front, world x 0..HALL: roof, two floors of wall, a cornice between them, a stone porch. */
+function paintMansion(b: CanvasRenderingContext2D): void {
+  // Wall. Uses the mansion_wall brick tile once sprites are loaded, rectangles before that.
   b.fillStyle = '#1b1529';
   b.fillRect(0, 0, HALL, FLOOR);
-  b.fillStyle = '#211a33';
-  for (let row = 0, y = 0; y < FLOOR - 30; y += 8, row++) {
-    const off = (row % 2) * 8;
-    for (let x = -16; x < HALL; x += 16) {
-      b.fillRect(x + off + 1, y + 1, 14, 6);
+  const tile = getSprite('mansion_wall');
+  if (tile) {
+    b.imageSmoothingEnabled = false;
+    for (let y = 24; y < FLOOR - 6; y += 16) {
+      for (let x = 0; x < HALL; x += 16) b.drawImage(tile.bitmap, x, y);
+    }
+  } else {
+    b.fillStyle = '#211a33';
+    for (let row = 0, y = 24; y < FLOOR - 6; y += 8, row++) {
+      const off = (row % 2) * 8;
+      for (let x = -16; x < HALL; x += 16) b.fillRect(x + off + 1, y + 1, 14, 6);
     }
   }
 
-  // Floor edge
-  b.fillStyle = '#271e3a';
-  b.fillRect(0, FLOOR - 28, HALL, 28);
+  // Roof: slate rows, a chimney, and a stone eave.
+  b.fillStyle = '#120e1c';
+  b.fillRect(0, 0, HALL, 24);
+  b.fillStyle = '#1c162b';
+  for (let y = 3; y < 22; y += 6) {
+    for (let x = ((y / 6) % 2) * 6; x < HALL; x += 12) b.fillRect(x, y, 11, 3);
+  }
+  b.fillStyle = '#120e1c';
+  b.fillRect(452, 0, 18, 24);
+  b.fillStyle = '#2a2240';
+  b.fillRect(450, 0, 22, 3);
   b.fillStyle = '#3a2d52';
-  b.fillRect(0, FLOOR - 30, HALL, 2);
+  b.fillRect(0, 22, HALL, 2);
+  b.fillStyle = '#2a2240';
+  b.fillRect(0, 24, HALL, 3);
 
-  // Floor tiles
-  b.fillStyle = '#21192f';
-  for (let x = 4; x < HALL; x += 28) {
-    b.fillRect(x, FLOOR - 24, 22, 20);
+  // Upper landing: a stone ledge with a balustrade. The upper doors stand on it.
+  const land = getSprite('landing');
+  if (land) {
+    b.imageSmoothingEnabled = false;
+    for (let x = 0; x < HALL; x += 16) b.drawImage(land.bitmap, x, UPPER_FLOOR - 14);
+  } else {
+    b.fillStyle = '#2a2240';
+    for (let x = 0; x < HALL; x += 16) for (const px of [1, 9]) b.fillRect(x + px, UPPER_FLOOR - 11, 3, 11);
+    b.fillRect(0, UPPER_FLOOR - 14, HALL, 3);
+    b.fillStyle = '#3a3152';
+    b.fillRect(0, UPPER_FLOOR - 14, HALL, 2);
+    b.fillRect(0, UPPER_FLOOR, HALL, 1);
+    b.fillStyle = '#2a2240';
+    b.fillRect(0, UPPER_FLOOR + 1, HALL, 4);
+    b.fillStyle = '#120d1a';
+    b.fillRect(0, UPPER_FLOOR + 5, HALL, 2);
   }
 
-  // Ground below floor
+  // Porch: stone steps along the ground line, then the dark ground.
+  b.fillStyle = '#271e3a';
+  b.fillRect(0, FLOOR - 6, HALL, 6);
+  b.fillStyle = '#3a2d52';
+  b.fillRect(0, FLOOR - 6, HALL, 1);
   b.fillStyle = '#140f1e';
   b.fillRect(0, FLOOR, HALL, H - FLOOR);
   b.fillStyle = '#1c1529';
-  for (let y = FLOOR + 6; y < H; y += 7) {
-    b.fillRect(0, y, HALL, 1);
-  }
+  for (let y = FLOOR + 6; y < H; y += 7) b.fillRect(0, y, HALL, 1);
   b.fillStyle = '#2e2442';
   b.fillRect(0, FLOOR, HALL, 1);
 
-  // Moonlit window
-  b.fillStyle = '#3a2d52';
-  b.fillRect(20, 34, 56, 70);
-  b.fillStyle = '#0c1530';
-  b.fillRect(24, 38, 48, 62);
-  b.fillStyle = '#e9e4c9';
-  b.beginPath();
-  b.arc(46, 60, 11, 0, Math.PI * 2);
-  b.fill();
-  b.fillStyle = '#0c1530';
-  b.beginPath();
-  b.arc(51, 56, 10, 0, Math.PI * 2);
-  b.fill();
-  b.fillStyle = '#3a2d52';
-  b.fillRect(46, 38, 3, 62);
-  b.fillRect(24, 68, 48, 3);
-
-  // Moonlight shaft
-  b.fillStyle = 'rgba(200,210,255,0.06)';
-  b.beginPath();
-  b.moveTo(24, FLOOR);
-  b.lineTo(72, FLOOR);
-  b.lineTo(110, H);
-  b.lineTo(10, H);
-  b.fill();
-
-  // Cobweb top-left corner
+  // Cobweb, top-left corner of the roofline.
   b.strokeStyle = 'rgba(200,190,220,0.25)';
   b.lineWidth = 1;
   for (let k = 1; k <= 3; k++) {
     b.beginPath();
-    b.arc(0, 0, k * 9, 0, Math.PI / 2);
+    b.arc(0, 27, k * 9, -Math.PI / 2, 0);
     b.stroke();
   }
   b.beginPath();
-  b.moveTo(0, 0); b.lineTo(30, 10);
-  b.moveTo(0, 0); b.lineTo(18, 24);
-  b.moveTo(0, 0); b.lineTo(6, 30);
+  b.moveTo(0, 27); b.lineTo(30, 17);
+  b.moveTo(0, 27); b.lineTo(18, 51);
+  b.moveTo(0, 27); b.lineTo(6, 57);
   b.stroke();
-
-  paintYard(b);
-  paintArch(b);
-  return bg;
 }
 
 /** Moonlit graveyard, world x HALL..WORLD. */
@@ -108,19 +118,19 @@ function paintYard(b: CanvasRenderingContext2D): void {
   }
 
   // Moon with glow and craters.
-  const glow = b.createRadialGradient(705, 40, 8, 705, 40, 50);
+  const glow = b.createRadialGradient(860, 40, 8, 860, 40, 50);
   glow.addColorStop(0, 'rgba(233,228,201,0.28)');
   glow.addColorStop(1, 'rgba(233,228,201,0)');
   b.fillStyle = glow;
-  b.fillRect(655, 0, 100, 100);
+  b.fillRect(810, 0, 100, 100);
   b.fillStyle = '#e9e4c9';
   b.beginPath();
-  b.arc(705, 40, 15, 0, Math.PI * 2);
+  b.arc(860, 40, 15, 0, Math.PI * 2);
   b.fill();
   b.fillStyle = 'rgba(120,115,100,0.35)';
-  b.fillRect(699, 34, 4, 3);
-  b.fillRect(709, 43, 3, 3);
-  b.fillRect(703, 47, 2, 2);
+  b.fillRect(854, 34, 4, 3);
+  b.fillRect(864, 43, 3, 3);
+  b.fillRect(858, 47, 2, 2);
 
   // Hills.
   b.fillStyle = '#16132a';
@@ -155,16 +165,4 @@ function paintYard(b: CanvasRenderingContext2D): void {
   for (let x = x0 + 3; x < WORLD; x += 9) {
     b.fillRect(x, FLOOR - 2 + (x % 3), 1, 2);
   }
-}
-
-/** End wall with an archway between hallway and yard, x 498..524. */
-function paintArch(b: CanvasRenderingContext2D): void {
-  b.fillStyle = '#2f2645';
-  b.fillRect(498, 0, 6, FLOOR);
-  b.fillRect(518, 0, 6, FLOOR);
-  b.fillStyle = '#3a2d52';
-  b.fillRect(498, 0, 26, 52);
-  b.fillStyle = '#151129';
-  b.fillRect(498, 52, 6, 2);
-  b.fillRect(518, 52, 6, 2);
 }

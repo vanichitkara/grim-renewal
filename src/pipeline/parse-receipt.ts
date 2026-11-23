@@ -133,7 +133,7 @@ function parseDate(text: string): string | null {
 
 // ── Merchant normalization ────────────────────────────────────────────────────
 
-function normalizeMerchant(raw: string): string {
+export function normalizeMerchant(raw: string): string {
   return raw
     .replace(/\.(com|co\.uk|io|net|org)$/i, '')
     .replace(/\s+(Inc\.|LLC|Ltd\.|Corp\.|Payments|Technologies|Services)\.?$/i, '')
@@ -157,6 +157,28 @@ const BILLING_SIGNALS = [
 
 function isBillingEmail(text: string): boolean {
   return BILLING_SIGNALS.some((re) => re.test(text));
+}
+
+// ── Cancellation-email detection ──────────────────────────────────────────────
+
+// Best-effort. Phrases that say a cancel happened or is scheduled. Marketing such as
+// "cancel anytime" or "you can cancel" must not match, so every pattern needs a
+// past or scheduled form.
+const CANCELLATION_SIGNALS = [
+  /\b(?:has|have|had|is|was|been)\s+(?:been\s+)?cancel+ed\b/i,
+  /\byou(?:'ve|\u2019ve|\s+have)\s+cancel+ed\b/i,
+  /\bsorry\s+to\s+see\s+you\s+go\b/i,
+  /\bwe(?:'re|\u2019re|\s+are)\s+sorry\s+to\s+see\s+you\s+(?:go|leave)\b/i,
+  /\byour\s+(?:membership|subscription|plan|access)\s+(?:will\s+)?(?:ends?|expires?)\s+on\b/i,
+  /\bcancell?ation\s+(?:confirmation|confirmed|complete)\b/i,
+];
+
+/**
+ * True when the text reads like a cancellation notice. Pure, best-effort.
+ * PRIVACY: same rule as parseReceipt, the caller discards the text right after.
+ */
+export function isCancellationEmail(text: string): boolean {
+  return CANCELLATION_SIGNALS.some((re) => re.test(text));
 }
 
 // ── Phone-only detection ──────────────────────────────────────────────────────
@@ -231,5 +253,6 @@ export function parseReceipt(
     phoneOnly,
     phone,
     memberId: null,      // TODO: member ID pattern pass
+    senderDomain,
   };
 }

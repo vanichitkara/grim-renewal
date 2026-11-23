@@ -9,14 +9,11 @@ describe('landing page (index.html, the first page visitors see)', () => {
     expect(html).toContain("location.replace('./app.html'");
     expect(html).toMatch(/access_token\|error\|bridge/);
   });
-  it('marks every demo link for removal', () => {
-    const demoLinks = html.match(/app\.html\?demo/g) ?? [];
-    const markers = html.match(/TODO\(remove-demo\)/g) ?? [];
-    expect(markers.length).toBeGreaterThanOrEqual(demoLinks.length);
+  it('keeps a clear demo button for judges (Google testing mode allows only listed test users)', () => {
+    expect(html).toContain('Try the demo · no sign-in');
   });
   it('links to the app and the demo', () => {
     expect(html).toContain('href="./app.html"');
-    // TODO(remove-demo): delete this line when the demo links leave the landing page.
     expect(html).toContain('href="./app.html?demo"');
   });
   it('uses no root-absolute paths, so it works under a sub-path', () => {

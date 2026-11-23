@@ -1,0 +1,12 @@
+# What `gcloud run deploy --source .` may upload. Everything is excluded, then only the server files are let back in.
+# This keeps .env, tokens, node_modules, the site and your git history off Google Cloud.
+*
+!Dockerfile
+!server/
+!server/community-api.ts
+!server/known-merchants.json
+!server/runtime-package.json
+!src/
+!src/community/
+!src/community/*.ts
+src/community/*.test.ts

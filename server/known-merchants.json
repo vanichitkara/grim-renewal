@@ -1,0 +1,12 @@
+{
+  "note": "Only keys on this list are stored by the community API. The list makes no claim about how any company cancels. The last five are the mock merchants of the demo.",
+  "merchants": [
+    "netflix.com", "spotify.com", "disneyplus.com", "hulu.com", "max.com", "primevideo.com", "paramountplus.com",
+    "peacocktv.com", "crunchyroll.com", "youtube.com", "audible.com", "deezer.com", "tidal.com", "siriusxm.com",
+    "adobe.com", "microsoft.com", "dropbox.com", "evernote.com", "notion.so", "grammarly.com", "canva.com",
+    "zoom.us", "slack.com", "github.com", "openai.com", "duolingo.com", "masterclass.com", "coursera.org",
+    "nytimes.com", "wsj.com", "washingtonpost.com", "economist.com", "medium.com",
+    "hellofresh.com", "blueapron.com", "peloton.com", "planetfitness.com", "playstation.com",
+    "streamflix.com", "cloudboxpro.com", "mealcrate.com", "ironcoregym.com", "designhub.com"
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Privacy guard",
+      "description": "After a source file is saved, check it against .kiro/steering/privacy.md: gmail.readonly only, no logged tokens or message content, no stored token outside session-auth.ts, no drafts/sent/trash queries, no auto-filled passwords. Problems go back to the agent to fix.",
+      "trigger": "PostFileSave",
+      "matcher": "src/.*\\.(ts|html|mts)$",
+      "action": { "type": "command", "command": "node scripts/hooks/privacy-guard.mjs" },
+      "timeout": 20
+    }
+  ]
+}

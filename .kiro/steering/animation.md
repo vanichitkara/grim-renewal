@@ -31,6 +31,8 @@ Use only the named easings from `src/animation/ease.ts`:
 - Every animation step must be interruptible (tween can be cancelled mid-flight).
 
 ## Color Palette (never hardcode outside these)
+Sprite shading drawn before the palette guard hook existed uses extra shades of these colors. New code uses only the
+nine below; `.kiro/hooks/palette-guard.json` checks every newly added line.
 ```
 --night:  #120e1c   (background)
 --crypt:  #1c162b   (card surfaces)
@@ -65,3 +67,14 @@ Use only the named easings from `src/animation/ease.ts`:
 - Always present in the prototype. Hidden in production behind a `?debug` query param.
 - Must include: speed, knocks, dissolve time, cancel delay, force-fail toggle.
 - Must show current state machine step as plain text (for debugging and the write-up).
+
+## Mansion Scene
+- The scene is a haunted mansion front: doors on two floors (ground, and an upper landing with a rail). No windows. Layout and paging live in the pure `src/animation/layout.ts`; draw code never computes slot positions itself.
+- 8 slots per page (4 columns, ground door below, upper door above). Never draw more than `PER_PAGE` slots. More subscriptions go on further pages.
+- The reaper glides (`ease.out`) for short hops and blinks (smoke out, smoke in) for far targets. The approach starts on the `approved` event only.
+- The kill (dissolve, tombstone at the door's foot, on the landing for upper doors) or the Boss Door flee plays only after `cancel_ok` / `cancel_fail`. A failed cancel leaves the door standing and the reaper flees.
+- Long queues use `layout.pace()`: fewer knocks and faster tweens, capped at 2.5x. `tune.speed` and reduced motion still apply (no smoke, no shake under reduced motion).
+- Pages turn only between sequences, after all tweens have settled. The page follows the reaper (auto-turn) and is announced in the `aria-live` region; the canvas `aria-label` names the page and the current action.
+- A slot with a cancelled subscription shows a tombstone at its door. Every glide, blink and kill is a tween in the `live` set and can be cancelled.
+- The graveyard is its own full-frame scene (world x 480..960). The camera shows the mansion (x 0) or the yard (x 480), never between: a cut through a short fade, no pan. Only with trials is there a yard: with none, `setView('yard')` does nothing and the yard is not drawn.
+- New sprites come from `scripts/make-sprites.ts` only, and every one has a rectangle fallback.

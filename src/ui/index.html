@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<link rel="icon" type="image/svg+xml" href="./favicon.svg">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Grim Renewal — Make sure the dead stay dead.</title>
 <meta name="description" content="Grim Renewal finds your forgotten subscriptions and sends the Reaper to cancel them while you watch and approve.">
@@ -24,7 +25,9 @@ if (/[#&](access_token|error|bridge)=/.test(location.hash)) location.replace('./
   --blood:  #e0574f;
   --spirit: #c99bff;
   --torch:  #ff9a3c;
-  --display: "Pixelify Sans", "Courier New", monospace;
+  /* Readability first: the pixel face is for the logo only. */
+  --brand:   "Pixelify Sans", "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --display: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
   --body:    "Atkinson Hyperlegible", system-ui, sans-serif;
   color-scheme: dark;
 }
@@ -38,6 +41,7 @@ a:focus-visible, button:focus-visible { outline: 2px solid var(--coin); outline-
 .skip:focus { top: 8px; }
 .wrap { max-width: 1040px; margin: 0 auto; padding: 0 20px; }
 h1, h2, h3 { font-family: var(--display); margin: 0; text-wrap: balance; }
+h1 { font-family: var(--brand); }
 h2 { font-size: clamp(26px, 4vw, 36px); color: var(--bone); margin-bottom: 8px; }
 h3 { font-size: 20px; color: var(--coin); margin-bottom: 4px; }
 p { margin: 0 0 12px; }
@@ -46,7 +50,7 @@ section { padding: 56px 0; border-top: 2px solid var(--stone); }
 
 /* Header */
 .top { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 0; }
-.brand { font-family: var(--display); font-weight: 700; font-size: 20px; color: var(--bone); text-decoration: none; }
+.brand { font-family: var(--brand); font-weight: 700; font-size: 20px; color: var(--bone); text-decoration: none; }
 .top nav { display: flex; gap: 18px; flex-wrap: wrap; }
 .top nav a { color: var(--mist); text-decoration: none; font-weight: 700; }
 .top nav a:hover { color: var(--bone); text-decoration: underline; }
@@ -131,7 +135,6 @@ footer .brand { display: block; margin-bottom: 6px; }
         <a href="#how">How it works</a>
         <a href="#features">Features</a>
         <a href="#privacy">Privacy</a>
-        <!-- TODO(remove-demo): drop the Demo link before launch (see docs/week-plan.md) -->
         <a href="./app.html?demo">Demo</a>
       </nav>
     </div>
@@ -144,8 +147,7 @@ footer .brand { display: block; margin-bottom: 6px; }
       <p class="sub">Your subscriptions keep coming back. We make sure they stay buried.</p>
       <div class="cta">
         <a class="btn btn-primary" href="./app.html">Enter the crypt</a>
-        <!-- TODO(remove-demo): drop the Try the demo button before launch -->
-        <a class="btn btn-ghost" href="./app.html?demo">Try the demo</a>
+        <a class="btn btn-ghost" href="./app.html?demo">Try the demo · no sign-in</a>
       </div>
     </div>
   </div>
@@ -223,7 +225,7 @@ footer .brand { display: block; margin-bottom: 6px; }
         <li>Raw email text is thrown away after the key facts are taken.</li>
         <li>Nothing is sold or shared.</li>
       </ul>
-      <p class="note"><strong>Hackathon prototype.</strong> Grim Renewal is an early build. Every cancel is approved by you, step by step.</p>
+      <p class="note"><strong>You stay in charge.</strong> Every cancel is shown to you first and waits for your yes.</p>
     </div>
   </section>
 </main>
@@ -232,7 +234,7 @@ footer .brand { display: block; margin-bottom: 6px; }
   <div class="wrap">
     <span class="brand">Grim Renewal</span>
     <p>Make sure the dead stay dead. Made for the Kiro hackathon.</p>
-    <p><a href="./app.html">Open the app</a> <!-- TODO(remove-demo): drop this footer demo link before launch --><a href="./app.html?demo">Try the demo</a></p>
+    <p><a href="./app.html">Open the app</a> · <a href="./app.html?demo">Try the demo</a></p>
   </div>
 </footer>
 

@@ -18,6 +18,9 @@ Colours come from the animation.md palette plus the dark tones already used in t
 | door_frame.png | 40x62 | 1 | frame and doorway void |
 | door_panel.png | 34x58 | 1 | sliding panel, squeezed as it opens |
 | tombstone.png | 14x16 | 1 | rises from the floor |
+| landing.png | 16x22 | 1 | upper landing tile, repeated across the wall: balustrade on top, stone ledge below (ledge top = upper floor line) |
+| mansion_wall.png | 16x16 | 1 | brick tile for the mansion wall (background pattern) |
+| smoke.png | 16x16 | 4 | blink puff: grows, then thins out |
 | coin.png | 4x4 | 4 | spin |
 | ghost.png | 7x7 | 2 | soul |
 
