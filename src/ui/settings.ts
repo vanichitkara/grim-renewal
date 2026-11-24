@@ -3,7 +3,7 @@
  * Opened from the header "Settings" button. A native <dialog>: Escape closes it, focus is trapped.
  * Text is set with textContent only (the email comes from the user or Google).
  */
-import { isMuted, setMuted, getVolume, setVolume, onSoundChange, unlockAudio, sfx } from '../animation/sound.ts';
+import { isMuted, setMuted, getVolume, setVolume, onSoundChange, unlockAudio, playTestSound } from '../animation/sound.ts';
 
 /** Keys that belong to the signed-in account. Sign out forgets them; device prefs (sound, view) stay. */
 export const ACCOUNT_KEYS = ['grim_auth', 'grim_subs', 'grim_claims', 'grim_celebrated'] as const;
@@ -52,7 +52,8 @@ export function initSettings(openBtn: HTMLButtonElement, opts: SettingsOpts): HT
   const vol = mk('input'); vol.type = 'range'; vol.id = 'setVolume'; vol.min = '0'; vol.max = '100'; vol.step = '5';
   volLbl.append(volOut, vol);
   const test = mk('button', 'Play a test sound'); test.type = 'button'; test.className = 'ghost'; test.id = 'setTestSound';
-  snd.append(sndH, onLbl, volLbl, test);
+  const testMsg = mk('p'); testMsg.className = 'note'; testMsg.id = 'setTestMsg'; testMsg.setAttribute('aria-live', 'polite');
+  snd.append(sndH, onLbl, volLbl, test, testMsg);
 
   // Inner box carries the padding, so only a click outside it hits the dialog (the backdrop).
   const body = mk('div'); body.className = 'settings-body';
@@ -72,7 +73,13 @@ export function initSettings(openBtn: HTMLButtonElement, opts: SettingsOpts): HT
 
   on.addEventListener('change', () => { setMuted(!on.checked); if (on.checked) unlockAudio(); });
   vol.addEventListener('input', () => setVolume(Number(vol.value) / 100));
-  test.addEventListener('click', () => { unlockAudio(); sfx.coin(); });
+  test.addEventListener('click', async () => {
+    const r = await playTestSound();
+    testMsg.textContent = r === 'played'
+      ? (getVolume() === 0 ? 'Volume is at 0%. Turn it up to hear it.' : 'Playing a knock and a coin.')
+      : r === 'muted' ? 'Sound is off. Tick Play sounds first.'
+      : 'The browser blocked sound. Check the tab is not muted, then try again.';
+  });
 
   const paintAccount = (): void => {
     const email = opts.getEmail();

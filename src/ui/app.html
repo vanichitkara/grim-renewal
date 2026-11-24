@@ -230,6 +230,18 @@ body.locked .proto, body.locked #bridgeChip, body.locked #scanStatus, body.locke
 .gate .gate-msg { color: var(--blood); min-height: 1.4em; }
 .gate button { font-size: 16px; padding: 12px 22px; }
 
+/* Title goes home; footer for the open app (hidden while locked) */
+h1 .home-link { color: inherit; text-decoration: none; }
+h1 .home-link:hover { color: var(--coin); }
+.site-foot { border-top: 2px solid var(--stone); margin-top: 24px; padding: 24px 0 32px; color: var(--mist); text-align: center; display: grid; gap: 6px; }
+.site-foot p { margin: 0; }
+.site-foot a, .site-foot .linklike { color: var(--mist); margin: 0 6px; }
+.site-foot a:hover, .site-foot .linklike:hover { color: var(--coin); }
+.foot-brand { font-family: var(--brand); font-weight: 700; font-size: 20px; color: var(--bone) !important; text-decoration: none; }
+.linklike { background: none; border: 0; padding: 0; font: inherit; text-decoration: underline; cursor: pointer; letter-spacing: 0; }
+body.locked .site-foot { display: none; }
+h1 .home-link:focus-visible, .site-foot a:focus-visible { outline: 2px solid var(--coin); outline-offset: 2px; }
+
 /* Settings dialog */
 .settings { padding: 0; border: 1px solid var(--stone); border-radius: 4px; background: var(--crypt); color: var(--bone); width: min(420px, calc(100vw - 32px)); }
 .settings::backdrop { background: rgba(18, 14, 28, 0.75); }
@@ -249,7 +261,7 @@ body.locked .proto, body.locked #bridgeChip, body.locked #scanStatus, body.locke
 <div class="wrap">
   <header>
     <div>
-      <h1>💀 Grim Renewal</h1>
+      <h1><a class="home-link" href="./" title="Back to the home page">💀 Grim Renewal</a></h1>
       <p class="tagline">Make sure the dead stay dead. Every forgotten subscription is a zombie. The Reaper goes knocking — and waits for the result before swinging.</p>
     </div>
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
@@ -369,7 +381,11 @@ body.locked .proto, body.locked #bridgeChip, body.locked #scanStatus, body.locke
     <div class="state">State machine: <b id="stateName">idle</b> <span id="stateSub"></span></div>
   </details>
 
-  <p class="note">All pixel art is original and drawn by script. In the demo, the subscriptions and cancels are made up. The animation waits for the result before choosing kill or retreat. Savings that count are the ones shown at the top: avoided charges are only counted after a receipt gap or a cancellation you told us about.</p>
+  <footer class="site-foot" aria-label="Site">
+    <a class="foot-brand" href="./">Grim Renewal</a>
+    <p>Make sure the dead stay dead.</p>
+    <p><a href="./">Home</a> · <a href="./#privacy">Privacy</a> · <button type="button" class="linklike" id="footSettings">Settings</button></p>
+  </footer>
 </div>
 
 <!-- aria-live region for screen readers -->
@@ -678,6 +694,8 @@ initSettings(document.getElementById('openSettings'), {
     sessionStorage.removeItem('grim_simulate');
   },
 });
+// The footer's Settings link opens the same panel.
+document.getElementById('footSettings')?.addEventListener('click', () => document.getElementById('openSettings').click());
 
 if (oauthToken) {
   document.body.classList.remove('locked'); // signed in: open the crypt
