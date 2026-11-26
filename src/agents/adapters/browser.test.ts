@@ -158,7 +158,7 @@ describe('browser adapter errors and MCP arguments', () => {
     await drv.click('e4');
     expect(calls[0]).toEqual(['browser_click', { element: 'e4', target: 'e4', ref: 'e4' }]);
     const crash = createPlaywrightMcpDriver(async () => { throw new Error('browser_crashed'); });
-    const res = await createBrowserAdapter(() => crash)({ ...({} as never), cancelUrl: 'https://x.test' } as never, async () => true);
+    const res = await createBrowserAdapter(() => crash)({ cancelUrl: 'https://x.test' } as unknown as Subscription, async () => true);
     expect(res).toEqual({ ok: false, reason: 'browser_crashed' });
   });
 });
