@@ -98,8 +98,13 @@ export function chipView(status: BridgeStatus, hostname: string): { text: string
     : { text: 'Browser cancels: off. Run: npm run bridge', hidden: false };
 }
 
-/** Probes /health in every mode. Registers the browser adapter on success. */
-export async function connectBridge(): Promise<BridgeStatus> {
+/**
+ * Probes /health, but only on localhost: the bridge runs on the user's own computer, and a hosted
+ * page probing 127.0.0.1 logs a console error and can trigger Chrome's local-network prompt.
+ * Registers the browser adapter on success.
+ */
+export async function connectBridge(hostname: string = typeof location !== 'undefined' ? location.hostname : ''): Promise<BridgeStatus> {
+  if (!isLocalHost(hostname)) return 'not_found';
   const s = getBridgeToken();
   try {
     const h = await fetch(`${BRIDGE}/health`, { headers: { 'x-bridge-token': s } });

@@ -1,40 +1,36 @@
-# Grim Renewal: demo video script (about 3 minutes)
+# Grim Renewal: demo video script (2:40, must stay under 3:00)
 
-Judges score five things equally: impact, Kiro use, design, idea, presentation.
-They asked for: the problem, the solution working end to end, and how specs, steering and hooks got us there.
+Rules this script follows: the app works on screen in the first 10 seconds; it starts signed in;
+no sign-up, no setup, no typing live; one strong example per feature; jump cuts; on-screen text for each point;
+Kiro on screen; no music or trademarks without rights (the pixel art and sounds are original).
+Upload to YouTube as **Public**.
 
-**Rules for recording**
-- Use the demo Gmail account with fake receipts (privacy.md). Never a real personal inbox.
-- Record at 1280×720 or larger. Turn sound on (Settings → Sound, volume about 60%).
-- Use `?simulate` for the live part, so cancels play on the mock sites and nothing real is cancelled.
-- Keep each shot short. Speak over the action, not after it.
+## Before you record
 
-| Time | Show | Say |
-|---|---|---|
-| 0:00–0:15 | Landing page, the Reaper scene moving. | "The average person pays for subscriptions they forgot. Budgeting apps show what you pay. Nobody shows you what you forgot, or cancels it for you." |
-| 0:15–0:30 | Click **Enter the crypt**. The sign-in card with the consent text. | "Grim Renewal reads only receipts. Read-only Gmail. It keeps the company, the amount and the date, and throws away the rest." |
-| 0:30–0:50 | `app.html?simulate`, Connect Gmail, the potion loader, then the results header. | "One sign-in, and the answer comes first: you pay this much a month for these things you may have forgotten." |
-| 0:50–1:15 | The mansion scene: doors on two floors, tags, paging. Switch to **List** and back. | "Each forgotten subscription is a zombie behind a door. More than eight? The mansion gets more pages. Prefer a table? The List shows the same data." |
-| 1:15–1:45 | Send the Reaper to one door. Approve. The Cancellation Player shows each step on the mock site. Zombie dissolves. | "The Reaper cancels while you watch. Every click waits for your yes. It never types a password. The animation waits for the real result, so it never celebrates early." |
-| 1:45–2:05 | A failed one (Tuning panel, Ctrl+Shift+D, "make every cancellation fail"): "Cancel failed". Open the **Cancel kit**: Online / Email / Phone, the "Start here" line, which comes from shared tips or the starter list. | "When the Reaper can't finish, it says so and hands you a Cancel kit: the link, an email draft, a call script. It opens on the method that worked for most people." |
-| 2:05–2:20 | Mark "I cancelled it", the share box (off by default). The savings header: Avoided so far vs Next 12 months. | "Savings stay honest. A missing receipt is only 'no charge seen'. 'Verified' needs a cancellation and a full billing cycle with no charge." |
-| 2:20–2:30 | Graveyard view with trials, the .ics reminder. | "Free trials go in the graveyard, with a calendar reminder two days before they charge." |
-| 2:30–2:55 | Kiro: `.kiro/specs/` folder (requirements, design, tasks), `.kiro/steering/privacy.md`, a hook firing on save and handing a problem back, the Kiro Crew board with workers and accepted items. | "We built it with Kiro, spec first. Steering holds the privacy and animation rules. Hooks check every save against them. A Kiro Crew lead split the work across worker sessions, and nothing counted as done until an evaluator checked it. Kiro even caught a privacy leak in our own tips design." |
-| 2:55–3:00 | Logo and live URL. | "Grim Renewal. Make sure the dead stay dead." |
+- Sign in once with the seeded **test** Gmail account (never a real inbox, `privacy.md`). Refresh: you stay signed in.
+- Run `npm run bridge` and `npm run dev`, open `http://localhost:5173/app.html?simulate`. Or record the demo
+  (`app.html?demo&many`) on the live site if sign-in is not ready; then skip shot 4's real browser.
+- Settings → Sound on, volume about 60%. Browser zoom 110%. Hide bookmarks and other tabs.
+- Have open in Kiro: `.kiro/specs/cancel-kit/requirements.md`, `.kiro/steering/privacy.md`, `.kiro/hooks/privacy-guard.json`.
+- Record each shot as its own clip. Cut every load and wait.
 
-**If Google sign-in fails on the day**
-`?simulate` needs a real sign-in with the seeded test account. If that fails, record 0:30–1:45 with
-`app.html?demo&many` instead. The demo has no Cancellation Player: cancels play as the scene only. Say "in the demo" on screen.
+## Shots
 
-**Before recording on localhost**
-The header shows "Browser cancels: off" when the bridge is not running. Start `npm run bridge`, or record on the live site.
+| # | Time | On screen | On-screen text | Voice |
+|---|---|---|---|---|
+| 1 | 0:00–0:10 | Already signed in. Results header counts up, mansion doors with zombies. | **You pay $X/mo for N things you forgot** (your real numbers) | "This is my inbox, read-only. N zombie subscriptions, X dollars a month." |
+| 2 | 0:10–0:25 | Landing hero for 2 s, then back to the app. The guide ghost's hint bubble. | **Read-only Gmail. Receipts only.** | "Grim Renewal finds what you forgot. Budgeting apps show what you pay. We show what you forgot, and cancel it." |
+| 3 | 0:25–0:45 | Click a door's tag → card. Click **Send the Reaper**. The approval dialog. Click Approve. | **Nothing happens without your yes** | "Every subscription is a zombie behind a door. The Reaper waits for my approval." |
+| 4 | 0:45–1:15 | The Cancellation Player / real Chrome window: each step highlighted, approve, approve. Zombie dissolves, coins. | **A real browser, driven by Playwright MCP** | "The Reaper drives a real browser on my computer. It never types a password, and it only celebrates after the site says cancelled." |
+| 5 | 1:15–1:35 | A failed one: the funny error, then the Cancel kit opens on "Start here: Email", the email draft. | **When the robot can't, you get a kit** | "Some companies make it hard on purpose. Then you get the link, an email draft and a phone script." |
+| 6 | 1:35–1:50 | "I cancelled it" → share box (starts off) → tick → Done. | **Share what worked. Anonymously.** | "I can share which method worked. Only the company and yes or no. The next person starts with the answer." |
+| 7 | 1:50–2:00 | Savings header: Avoided so far vs Next 12 months. One card says "No charge seen for a full cycle". | **Proof, not guesses** | "Savings only count with proof. A missing receipt is never called verified." |
+| 8 | 2:00–2:10 | Graveyard: a trial climbing out. Click **Remind me**. | **Trials get buried before they charge** | "Free trials go to the graveyard, with a reminder before they charge." |
+| 9 | 2:10–2:35 | Kiro: the spec (requirements with WHEN/SHALL), `privacy.md`, then add `console.log(token)` (pasted, not typed) in a file, save, the privacy hook's message appears, undo. Then the Kiro Crew board. | **Built spec-first in Kiro** / **Hooks enforce the privacy rules** | "We built it spec-first in Kiro. Steering holds the privacy rules. Hooks check every save, so a slip like logging a token is caught at once. Kiro Crew agents built it as a team." |
+| 10 | 2:35–2:40 | Mansion, all doors quiet, the ghost: "All quiet. The dead stay dead." Logo and URL. | **grim-renewal · open source** | "Grim Renewal. Make sure the dead stay dead." |
 
-**Shots to capture ahead of time**
-1. A hook catching a problem: add `console.log(token)` to a file, save, show the privacy guard's message, undo.
-2. The work ledger board with accepted items.
-3. `?demo&many` for the paging shot if the demo inbox has fewer than 9 subscriptions.
+## After recording
 
-**Links for the description**
-- Live site: https://vanichitkara.github.io/grim-renewal/
-- Demo without sign-in: https://vanichitkara.github.io/grim-renewal/app.html?demo
-- Code: https://github.com/vanichitkara/grim-renewal
+- Total under 3:00. Jump-cut pauses and "ums".
+- Add the on-screen text as captions in the editor.
+- Description: paste the tagline and the links from `docs/devpost.md`.

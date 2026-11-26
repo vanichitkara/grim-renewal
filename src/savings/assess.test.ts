@@ -197,6 +197,15 @@ describe('arithmetic', () => {
     expect(late.avoidedAmount).toBe(10);
   });
 
+  it('never verifies a sub billed through Apple, Google or PayPal, even with a claim and a quiet cycle', () => {
+    for (const senderDomain of ['apple.com', 'email.apple.com', 'google.com', 'paypal.com']) {
+      const s = sub({ senderDomain, chargeDates: ['2026-08-03', '2026-09-03', '2026-10-03'], cancellationEmailDate: '2026-10-20' });
+      const a = assessCancellation({ sub: s, claim: { claimedAt: '2026-10-20' } as Claim, now: at('2027-01-05') });
+      expect(a.level, senderDomain).toBe('confirmed');
+      expect(a.notes.join(' ')).toMatch(/can't verify/);
+    }
+  });
+
   it('uses the sub currency and sums per currency only', () => {
     const usd = assessCancellation({ sub: ROWS[0]!.sub, claim: null, now: at('2026-12-20') });
     const gbp = assessCancellation({

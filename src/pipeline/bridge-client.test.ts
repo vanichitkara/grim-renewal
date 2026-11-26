@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { extractBridgeToken, chipView, isLocalHost } from './bridge-client.ts';
 
 describe('extractBridgeToken', () => {
@@ -44,5 +44,16 @@ describe('bridgeErrorCode', () => {
     expect(bridgeErrorCode({ result: 'Invalid arguments for tool "browser_click"' })).toBe('bad_tool_args');
     expect(bridgeErrorCode({ error: 'mcp_error' })).toBe('mcp_error');
     expect(bridgeErrorCode({ result: 'something else https://secret.example/page' })).toBe('bridge_error');
+  });
+});
+
+describe('connectBridge', () => {
+  it('never probes 127.0.0.1 from a hosted page', async () => {
+    const { connectBridge } = await import('./bridge-client.ts');
+    const f = vi.fn();
+    vi.stubGlobal('fetch', f);
+    expect(await connectBridge('vanichitkara.github.io')).toBe('not_found');
+    expect(f).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
   });
 });

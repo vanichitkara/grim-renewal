@@ -2,8 +2,20 @@
 
 > Make sure the dead stay dead.
 
-Grim Renewal finds your forgotten subscriptions, scores how forgotten they are,
-and sends the Reaper to cancel them — while you watch and approve every step.
+**What:** Grim Renewal reads your Gmail receipts (read-only), finds the subscriptions you forgot,
+and helps you cancel them. A Reaper does the clicking while you watch and approve every step.
+
+**Who:** anyone paying for things they stopped using: streaming, apps, gyms, free trials that quietly turned paid.
+
+**Why:** people forget subscriptions they still pay for, and cancelling is made hard on purpose.
+Grim Renewal shows the number first ("You pay $X a month for N things you may have forgotten"),
+counts savings only when there is proof, and shares which cancel method really worked, anonymously, so the next person has it easier.
+
+**Try it in 10 seconds:** [the demo, no sign-in](https://vanichitkara.github.io/grim-renewal/app.html?demo).
+
+**Built with Kiro:** spec-driven development (10 specs in [`.kiro/specs`](.kiro/specs/README.md)),
+steering ([`.kiro/steering`](.kiro/steering/)), agent hooks ([`.kiro/hooks`](.kiro/hooks/)),
+MCP (Playwright MCP drives the browser), and Kiro Crew agents. See [How we built it with Kiro](#how-we-built-it-with-kiro).
 
 ## Live site
 
@@ -182,6 +194,23 @@ Without the bridge, browser cancels stay off and the Boss Door guide is used ins
 | Charges that return | Revenants |
 | Dormant accounts | Ghosts |
 | Phone-only cancellations | Boss Door |
+
+## Built With
+
+| | |
+|---|---|
+| **Kiro** | Specs (requirements, design, tasks), steering, agent hooks, MCP, Kiro Crew agents (team lead, workers, reviewers) |
+| **Frontend** | TypeScript, Vite, Canvas 2D (original pixel art drawn by script), Web Audio |
+| **Data** | Gmail API (`gmail.readonly`), Google OAuth (token flow, silent re-auth) |
+| **Cancelling** | Playwright MCP through a local bridge on your own computer |
+| **Shared tips** | Node, Google Cloud Run, Firestore |
+| **Hosting** | GitHub Pages, GitHub Actions |
+| **Tests** | Vitest, fast-check, headless Chrome checks |
+
+## License and contributing
+
+MIT, see [LICENSE](LICENSE). Help is welcome, especially cancel tips for real companies and new mock sites:
+see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Tagline
 
