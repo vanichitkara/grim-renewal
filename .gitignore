@@ -27,3 +27,6 @@ gmail-test-*
 *.log
 .vite/
 coverage/
+
+# Playwright MCP snapshots (local bridge runs)
+.playwright-mcp/

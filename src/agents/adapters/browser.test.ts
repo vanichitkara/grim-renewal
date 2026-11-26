@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { Subscription } from '../../types.ts';
-import { createBrowserAdapter, parseSnapshot } from './browser.ts';
+import { createBrowserAdapter, createPlaywrightMcpDriver, parseSnapshot } from './browser.ts';
 import type { PageSnapshot } from './browser.ts';
 
 const sub = (over: Partial<Subscription> = {}): Subscription => ({
@@ -148,5 +148,17 @@ describe('parseSnapshot', () => {
     expect(elements.find((e) => e.ref === 'e3')).toMatchObject({ role: 'button', name: 'Cancel subscription' });
     expect(elements.find((e) => e.ref === 'e4')?.name).toMatch(/has been cancelled/);
     expect(elements.find((e) => e.ref === 'e5')?.inputType).toBe('password');
+  });
+});
+
+describe('browser adapter errors and MCP arguments', () => {
+  it('reports a known bridge failure code, and sends target for clicks', async () => {
+    const calls: Array<[string, object]> = [];
+    const drv = createPlaywrightMcpDriver(async (tool, args) => { calls.push([tool, args]); return ''; });
+    await drv.click('e4');
+    expect(calls[0]).toEqual(['browser_click', { element: 'e4', target: 'e4', ref: 'e4' }]);
+    const crash = createPlaywrightMcpDriver(async () => { throw new Error('browser_crashed'); });
+    const res = await createBrowserAdapter(() => crash)({ ...({} as never), cancelUrl: 'https://x.test' } as never, async () => true);
+    expect(res).toEqual({ ok: false, reason: 'browser_crashed' });
   });
 });

@@ -53,12 +53,23 @@ export function getBridgeToken(): string {
   return devToken(); // from .env, dev server only: every local sign-in connects by itself
 }
 
+/** Turns a failed bridge reply into a short code the UI can show. Pure. Never returns page text. */
+export function bridgeErrorCode(j: { result?: unknown; error?: unknown }): string {
+  if (typeof j.error === 'string' && /^[a-z_]{3,40}$/.test(j.error)) return j.error;
+  const t = typeof j.result === 'string' ? j.result : '';
+  if (/Target crashed|Browser closed|has been closed/i.test(t)) return 'browser_crashed';
+  if (/Invalid arguments/i.test(t)) return 'bad_tool_args';
+  if (/not installed|Executable doesn't exist|install/i.test(t)) return 'browser_not_installed';
+  if (/timeout/i.test(t)) return 'browser_timeout';
+  return 'bridge_error';
+}
+
 function makeBrowserAdapter(secret: string): CancelAdapter {
   const headers = { 'content-type': 'application/json', 'x-bridge-token': secret };
   const call = async (tool: string, args: object): Promise<unknown> => {
     const r = await fetch(`${BRIDGE}/call`, { method: 'POST', headers, body: JSON.stringify({ tool, args }) });
-    const j = (await r.json()) as { ok?: boolean; result?: unknown };
-    if (!r.ok || !j.ok) throw new Error('bridge_error');
+    const j = (await r.json()) as { ok?: boolean; result?: unknown; error?: unknown };
+    if (!r.ok || !j.ok) throw new Error(bridgeErrorCode(j));
     return j.result;
   };
   return createBrowserAdapter(() => createPlaywrightMcpDriver(call));

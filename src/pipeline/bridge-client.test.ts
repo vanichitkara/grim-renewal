@@ -36,3 +36,13 @@ describe('chipView', () => {
     expect(isLocalHost('example.com')).toBe(false);
   });
 });
+
+describe('bridgeErrorCode', () => {
+  it('names the real failure without page text', async () => {
+    const { bridgeErrorCode } = await import('./bridge-client.ts');
+    expect(bridgeErrorCode({ result: '### Error\nError: browserBackend.callTool: Target crashed' })).toBe('browser_crashed');
+    expect(bridgeErrorCode({ result: 'Invalid arguments for tool "browser_click"' })).toBe('bad_tool_args');
+    expect(bridgeErrorCode({ error: 'mcp_error' })).toBe('mcp_error');
+    expect(bridgeErrorCode({ result: 'something else https://secret.example/page' })).toBe('bridge_error');
+  });
+});
