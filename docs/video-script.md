@@ -8,8 +8,9 @@ Upload to YouTube as **Public**.
 ## Before you record
 
 - Sign in once with the seeded **test** Gmail account (never a real inbox, `privacy.md`). Refresh: you stay signed in.
-- Run `npm run bridge` and `npm run dev`, open `http://localhost:5173/app.html?simulate`. Or record the demo
-  (`app.html?demo&many`) on the live site if sign-in is not ready; then skip shot 4's real browser.
+- Run `npm run bridge` and `npm run dev`, open `http://localhost:5173/app.html?simulate&debug`, signed in with the test account.
+  Fallback only if sign-in breaks: `app.html?demo&many&debug`. The demo has no sign-in, so it breaks the "start logged in" rule; use it only for shots 3 to 8.
+- Shot 5 needs a failed cancel on purpose: open the Tuning panel (Ctrl+Shift+D) and tick "Make every cancellation fail". Untick it after.
 - Settings → Sound on, volume about 60%. Browser zoom 110%. Hide bookmarks and other tabs.
 - Have open in Kiro: `.kiro/specs/cancel-kit/requirements.md`, `.kiro/steering/privacy.md`, `.kiro/hooks/privacy-guard.json`.
 - Record each shot as its own clip. Cut every load and wait.
@@ -31,6 +32,6 @@ Upload to YouTube as **Public**.
 
 ## After recording
 
-- Total under 3:00. Jump-cut pauses and "ums".
+- Total under 3:00. Jump-cut pauses and "ums". If long, cut shot 8 first; keep shot 9 (Kiro), judges weigh it most.
 - Add the on-screen text as captions in the editor.
 - Description: paste the tagline and the links from `docs/devpost.md`.

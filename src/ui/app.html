@@ -439,8 +439,10 @@ intakeBridgeToken(); // strips #bridge= from the URL; leaves other hash params (
 const bridgeChip = document.getElementById('bridgeChip');
 async function refreshBridge() {
   const v = chipView(await connectBridge(), location.hostname);
+  // In the demo, hide the "run npm run bridge" setup hint: it is a terminal command, not a next step for a visitor.
+  const demoSetupHint = new URLSearchParams(location.search).has('demo') && !/connected/i.test(v.text);
   bridgeChip.textContent = v.text;
-  bridgeChip.hidden = v.hidden;
+  bridgeChip.hidden = v.hidden || demoSetupHint;
 }
 document.getElementById('bridgeTok').addEventListener('keydown', (e) => {
   if (e.key !== 'Enter') return;

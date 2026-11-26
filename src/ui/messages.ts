@@ -6,7 +6,7 @@
 
 export const MSG = {
   gmail401: 'That token turned to dust. Tap Connect Gmail to sign in again.',
-  gmail403: 'Gmail bolted the door. Its API may be off, or this account is not a test user. Check, then tap Connect Gmail.',
+  gmail403: 'Gmail bolted the door. This account may not be a test user. Check, then tap Connect Gmail.',
   gmail429: 'Gmail is out of breath. Wait a minute, then tap Connect Gmail to scan again.',
   scanFailed: 'The cauldron cracked. Nothing was lost. Tap Connect Gmail to scan again.',
   scanEmpty: 'The pot is empty. No receipts in 13 months. Tap Connect Gmail to try another account.',

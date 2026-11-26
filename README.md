@@ -9,7 +9,7 @@ and helps you cancel them. A Reaper does the clicking while you watch and approv
 
 **Why:** people forget subscriptions they still pay for, and cancelling is made hard on purpose.
 Grim Renewal shows the number first ("You pay $X a month for N things you may have forgotten"),
-counts savings only when there is proof, and shares which cancel method really worked, anonymously, so the next person has it easier.
+counts savings only when there is proof, and shares which cancel method really worked, with no name, email or amount attached, so the next person has it easier.
 
 **Try it in 10 seconds:** [the demo, no sign-in](https://vanichitkara.github.io/grim-renewal/app.html?demo).
 
@@ -39,11 +39,10 @@ the local Playwright bridge (see "Browser cancels").
   *Next 12 months* is an estimate and says so. A receipt gap alone is "No charge seen", never "Verified".
 - **Scene or List:** a haunted mansion front (doors on two floors, 8 per page, paging for more) or a plain table that scales to any count.
 - **Cancel kit:** Online / Email / Phone tabs. It opens on the method that worked for most people, and says why.
-- **Shared tips ("what worked"):** after you cancel, you may choose to share, anonymously, which method worked for a company.
+- **Shared tips ("what worked"):** after you cancel, you may choose to share which method worked for a company. No name, email or amount is sent.
   Only the company's website name, the method and yes/no are sent, only when you tick a box that starts OFF.
   The app downloads one public list of settled answers and looks companies up on your own machine, so the server never learns
-  which companies you have. See `docs/community-api.md`. **Without a deployed https server this works only on your machine;
-  the live site shows the starter list.**
+  which companies you have. See `docs/community-api.md`. The live site uses the tips server on Google Cloud Run (Firestore). Answers appear once enough people agree.
 - **Trial guard:** a calendar reminder file two days before a free trial ends.
 
 ## How we built it with Kiro

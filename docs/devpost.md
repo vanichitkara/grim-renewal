@@ -21,7 +21,7 @@ We wanted something that finds the zombies, proves the savings, and makes cancel
 - **Cancels while you watch:** the Reaper drives a real browser through Playwright MCP, on your own computer.
   Every click waits for your yes. It never types a password.
 - **Cancel kit** when a robot can't: the cancel link, an email draft, and a phone script, starting with the method that worked for most people.
-- **Shared tips:** after you cancel, you may share, anonymously, which method worked. Only the company's website name,
+- **Shared tips:** after you cancel, you may share which method worked, with no name, email or amount attached. Only the company's website name,
   the method and yes/no are sent, and only if you tick a box that starts off. The app downloads one public list and looks companies up
   on your own machine, so the server never learns what you pay for.
 - **Honest savings:** a missing receipt is only "no charge seen". "Verified" needs a cancellation and a full billing cycle with no charge.
@@ -53,7 +53,7 @@ Node on Google Cloud Run with Firestore for shared tips, GitHub Pages.
 
 ## Accomplishments
 
-- It works end to end: sign in, scan, cancel in a real browser, verify savings.
+- Every step is built and tested: sign in, scan, cancel in a real browser, verify savings. The demo runs the whole flow with no sign-in.
 - 330+ unit tests and headless-Chrome checks for every screen.
 - Every privacy rule is enforced by a hook, not by memory.
 
