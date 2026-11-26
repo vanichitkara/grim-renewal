@@ -4,6 +4,7 @@
  * these strings with textContent only.
  */
 
+import { MSG } from './messages.ts';
 import type { ConfirmStep, AdapterResult } from '../agents/reaper.ts';
 
 export type StepStatus = 'active' | 'done' | 'stopped';
@@ -47,14 +48,14 @@ export function finishSteps(steps: readonly PlayerStep[], ok: boolean): PlayerSt
 }
 
 const FAILURES: Record<string, string> = {
-  user_declined: 'Stopped. Nothing was cancelled.',
-  login_required: 'This page asks you to sign in. The Reaper never types passwords. Nothing was cancelled.',
-  no_cancel_control: 'Could not find the cancel button. Nothing was cancelled.',
-  step_limit: 'Too many steps. The Reaper gave up. Nothing was cancelled.',
+  user_declined: MSG.playerDeclined,
+  login_required: MSG.playerLogin,
+  no_cancel_control: MSG.playerNoControl,
+  step_limit: MSG.playerStepLimit,
 };
 
 /** Final line under the player. Honest about failure. */
 export function resultLine(res: AdapterResult, savedPerYear: number): string {
   if (res.ok) return `Cancelled. +$${savedPerYear.toFixed(2)}/yr`;
-  return FAILURES[res.reason] ?? 'Could not cancel automatically. Nothing was cancelled.';
+  return FAILURES[res.reason] ?? MSG.playerOther;
 }

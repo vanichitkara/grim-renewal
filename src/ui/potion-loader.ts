@@ -3,6 +3,7 @@
  * Canvas is decorative (aria-hidden); the aria-live region carries the status.
  * Reduced motion: one still frame, text updates only. The rAF loop stops on destroy().
  */
+import { MSG } from './messages.ts';
 import { ease } from '../animation/ease.ts';
 
 // ── Text (pure, tested) ──────────────────────────────────────────────────────
@@ -14,7 +15,7 @@ export function progressText(p?: { read: number; total: number }): string {
 }
 
 export function doneText(count: number): string {
-  if (count <= 0) return 'The pot is empty. No subscriptions in the last 13 months.';
+  if (count <= 0) return MSG.scanEmpty;
   return count === 1 ? '1 soul found' : `${count} souls found`;
 }
 

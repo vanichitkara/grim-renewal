@@ -146,7 +146,7 @@ describe('header and list model', () => {
     expect(h.projectedLabel).toContain('estimate');
   });
   it('empty input has an honest headline', () => {
-    expect(headerModel([], []).headline).toBe('No subscriptions found yet');
+    expect(headerModel([], []).headline).toBe('The crypt is quiet. No subscriptions found yet.');
   });
   it('list has one row per subscription and trial', () => {
     const l = listRows(rows, trials);

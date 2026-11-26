@@ -1,6 +1,7 @@
 /** Numbers and words for the results header and the List table. Pure; the DOM code only places them. */
 import type { Subscription } from '../types.ts';
 import { sumByCurrency, type Assessment } from '../savings/assess.ts';
+import { MSG } from '../ui/messages.ts';
 import type { Status } from './status.ts';
 
 /** A subscription at or above this score counts as "may have forgotten". */
@@ -48,7 +49,7 @@ export function headerModel(rows: readonly Row[], trials: readonly { sub: Subscr
     ? `You pay ${moneyList(perMonth)} a month for ${plural(forgotten.length, 'thing', 'things')} you may have forgotten`
     : rows.length
       ? `${plural(rows.length, 'subscription', 'subscriptions')} found. None look forgotten.`
-      : 'No subscriptions found yet';
+      : MSG.noneYet;
 
   const chips: HeaderModel['chips'] = [];
   const soon = trials.filter((t) => t.days <= TRIAL_SOON_DAYS).length;
