@@ -363,7 +363,8 @@ h1 .home-link:focus-visible, .site-foot a:focus-visible { outline: 2px solid var
     <div class="cards trials" id="trialCards" style="margin-top:12px"></div>
   </section>
   <div class="btnrow"><button id="raiseRevenant" type="button" class="ghost" hidden>Show a cancelled charge coming back</button>
-    <button id="bridgeTest" type="button" class="ghost" hidden>Test the browser bridge</button></div>
+    <button id="bridgeTest" type="button" class="ghost" hidden>Test the browser bridge</button>
+    <span id="bridgeTestResult" class="note" role="status" aria-live="polite" hidden></span></div>
   <p id="graveyardLive" class="sr-only" aria-live="polite" aria-atomic="true"></p>
 
   <details id="tuningPanel">
@@ -438,13 +439,17 @@ document.getElementById('bridgeTok').addEventListener('keydown', (e) => {
         accountEmail: 'test@example.com', cancelUrl: new URL('./test-cancel.html', location.href).href + (q.has('login') ? '?login=1' : ''),
         phoneOnly: false, phone: null, memberId: null, forgottenScore: 0.5, state: 'idle', stateChangedAt: new Date().toISOString(),
       };
+      // Show the result beside the button (the header chip is far above, off screen) and in the header.
+      const out = document.getElementById('bridgeTestResult');
+      const say = (t) => { out.hidden = false; out.textContent = t; bridgeChip.hidden = false; bridgeChip.textContent = t; };
       showApprovalDialog(sub, async () => {
+        await refreshBridge(); // pick up a bridge started after the page opened
         const adapter = getBrowserAdapter();
-        if (!adapter) { bridgeChip.textContent = 'Bridge test: FAIL (no key)'; return; }
-        bridgeChip.textContent = 'Bridge test: running…';
+        if (!adapter) { say('Bridge test: FAIL (no bridge key. Open the #bridge= link that npm run bridge printed)'); return; }
+        say('Bridge test: running… watch the new Chrome window');
         const r = await adapter(sub, async () => true);
         const want = q.has('login') ? (!r.ok && r.reason === 'login_required') : r.ok;
-        bridgeChip.textContent = 'Bridge test: ' + (want ? 'PASS' : 'FAIL (' + (r.ok ? 'ok' : r.reason) + ')');
+        say('Bridge test: ' + (want ? 'PASS' : 'FAIL (' + (r.ok ? 'ok' : r.reason) + ')'));
       }, () => {});
     });
   }
