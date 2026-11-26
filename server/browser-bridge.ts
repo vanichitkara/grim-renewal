@@ -5,6 +5,7 @@
 import { createServer } from 'node:http';
 import { randomBytes } from 'node:crypto';
 import { existsSync, readFileSync, writeFileSync, chmodSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { parseEnv, upsertEnv, isValidBridgeKey } from '../src/server/env-file.ts';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
@@ -13,7 +14,8 @@ import { decide, matchOrigin } from '../src/server/bridge-core.ts';
 const PORT = 8787;
 // The key lives in .env (git-ignored) so it stays the same between runs and the dev page connects by itself.
 // An environment variable wins over the file. First run with no key: make one and save it.
-const ENV_PATH = new URL('../.env', import.meta.url).pathname;
+// fileURLToPath, not .pathname: the project folder has a space, which .pathname keeps as %20.
+const ENV_PATH = fileURLToPath(new URL('../.env', import.meta.url));
 const fileText = existsSync(ENV_PATH) ? readFileSync(ENV_PATH, 'utf8') : '';
 const fromFile = parseEnv(fileText)['GRIM_BRIDGE_TOKEN'];
 let token: string | undefined = process.env['GRIM_BRIDGE_TOKEN'];
