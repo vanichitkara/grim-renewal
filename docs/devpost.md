@@ -37,7 +37,7 @@ We built Grim Renewal spec-first in Kiro, and used every Kiro surface:
 - **Agent hooks:** `.kiro/hooks/` checks every saved file against the steering: a privacy guard, a palette guard,
   test-on-save (runs only the tests that import the file), and spec-sync (unticks any task the code does not really have).
 - **MCP:** Playwright MCP is the Reaper's hands. A local bridge lets the web page drive it, with an approval on every click.
-- **Chrome extension (MV3):** the live site cancels in the user's own signed-in Chrome, with no terminal. It never types, asks per site, and the app approves every click.
+- **Chrome extension (MV3):** the live site cancels in the user's own signed-in Chrome, with no terminal. It never types, pins to the two dev ports and the live site only, asks for access to one site at a time (and removes that permission when the run ends), and the app approves every click.
 - **Kiro Crew agents:** a team lead split each round into work items, sent them to worker sessions, and let an evaluator,
   not the worker, decide when an item was done. A separate reviewer session checked each round.
 

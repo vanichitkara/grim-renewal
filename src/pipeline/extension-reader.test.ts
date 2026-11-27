@@ -46,7 +46,21 @@ function doc(nodes: N[]) {
     defaultView: { getComputedStyle: () => ({ display: 'block', visibility: 'visible' }) },
     querySelectorAll(sel: string) {
       if (sel.startsWith('[data-grim-ref]')) return els.filter((e) => 'data-grim-ref' in e.attrs);
-      return els;
+      // Return all nodes for '*' (DONE scan), otherwise filter by tag/selector.
+      if (sel === '*') return els;
+      // Simple multi-selector: split on comma, match tag or role attribute.
+      const parts = sel.split(',').map((s) => s.trim().toLowerCase());
+      return els.filter((e) => {
+        const tag = e.tagName.toLowerCase();
+        return parts.some((p) => {
+          if (p === tag) return true;
+          const roleMatch = /^\[role=(\w+)\]$/.exec(p);
+          if (roleMatch) return e.attrs.role === roleMatch[1];
+          const ariaLiveMatch = /^\[aria-live\]$/.exec(p);
+          if (ariaLiveMatch) return 'aria-live' in e.attrs;
+          return false;
+        });
+      });
     },
     querySelector(sel: string) {
       const m = /data-grim-ref="([^"]+)"/.exec(sel);
@@ -56,19 +70,22 @@ function doc(nodes: N[]) {
 }
 
 describe('reader.read', () => {
-  it('gives clickable controls a ref and text nodes none', () => {
+  it('gives clickable controls a ref; plain p text is not returned', () => {
     const d = doc([
       { tag: 'button', text: ' Cancel   subscription ' },
       { tag: 'p', text: 'Plan: Pro' },
     ]);
     const { elements } = reader.read(d);
+    // Only the button is clickable; p text is not in the new trimmed output.
     expect(elements[0]).toEqual({ ref: 'g1', role: 'button', name: 'Cancel subscription' });
-    expect(elements[1]).toMatchObject({ ref: '', role: 'paragraph', name: 'Plan: Pro' });
+    expect(elements.some((e: any) => e.name === 'Plan: Pro')).toBe(false);
   });
-  it('skips hidden nodes and disabled buttons get no ref', () => {
+  it('skips hidden nodes; disabled buttons have no ref', () => {
     const d = doc([{ tag: 'button', text: 'Gone', hidden: true }, { tag: 'button', text: 'Later', disabled: true }]);
     const { elements } = reader.read(d);
-    expect(elements).toEqual([{ ref: '', role: 'button', name: 'Later' }]);
+    // Hidden button excluded entirely; disabled button present but no ref.
+    expect(elements.find((e: any) => e.name === 'Gone')).toBeUndefined();
+    expect(elements.find((e: any) => e.name === 'Later')).toMatchObject({ ref: '', disabled: true });
   });
   it('marks password, checkbox and radio inputs; password has no ref', () => {
     const d = doc([
@@ -85,6 +102,33 @@ describe('reader.read', () => {
     const d = doc([{ tag: 'a', text: 'Billing' }]);
     reader.read(d);
     expect(reader.read(d).elements[0]!.ref).toBe('g1');
+  });
+  it('includes DONE-pattern text even from a plain p element', () => {
+    const d = doc([
+      { tag: 'button', text: 'Done' },
+      { tag: 'p', text: 'Your subscription has been cancelled.' },
+    ]);
+    const { elements } = reader.read(d);
+    expect(elements.some((e: any) => /cancelled/.test(e.name))).toBe(true);
+  });
+  it('snapshot carries no plain paragraph or list text beyond DONE pattern', () => {
+    const d = doc([
+      { tag: 'button', text: 'Cancel' },
+      { tag: 'p', text: 'Your billing address is 123 Main St.' },
+      { tag: 'li', text: 'Card ending 4242' },
+    ]);
+    const { elements } = reader.read(d);
+    expect(elements.some((e: any) => e.name === 'Your billing address is 123 Main St.')).toBe(false);
+    expect(elements.some((e: any) => e.name === 'Card ending 4242')).toBe(false);
+  });
+  it('h1-h3 headings are returned; h4 is not', () => {
+    const d = doc([
+      { tag: 'h1', text: 'Settings' },
+      { tag: 'h2', text: 'Billing' },
+      { tag: 'h3', text: 'Plan' },
+    ]);
+    const { elements } = reader.read(d);
+    expect(elements.filter((e: any) => e.role === 'heading').map((e: any) => e.name)).toEqual(['Settings', 'Billing', 'Plan']);
   });
 });
 
@@ -107,11 +151,25 @@ describe('reader.click', () => {
 });
 
 describe('origins', () => {
-  const pats = ['https://vanichitkara.github.io/*', 'http://localhost/*', 'http://127.0.0.1/*'];
-  it('allows the app origins on any port for localhost', () => {
+  // Updated patterns: exact ports for localhost/127.0.0.1 — no wildcard port.
+  const pats = [
+    'https://vanichitkara.github.io/*',
+    'http://localhost:5173/*',
+    'http://localhost:4173/*',
+    'http://127.0.0.1:5173/*',
+    'http://127.0.0.1:4173/*',
+  ];
+  it('allows the pinned app origins', () => {
     expect(origins.originAllowed('https://vanichitkara.github.io', pats)).toBe(true);
     expect(origins.originAllowed('http://localhost:5173', pats)).toBe(true);
-    expect(origins.originAllowed('http://127.0.0.1:9000', pats)).toBe(true);
+    expect(origins.originAllowed('http://localhost:4173', pats)).toBe(true);
+    expect(origins.originAllowed('http://127.0.0.1:5173', pats)).toBe(true);
+    expect(origins.originAllowed('http://127.0.0.1:4173', pats)).toBe(true);
+  });
+  it('refuses a non-pinned localhost port', () => {
+    expect(origins.originAllowed('http://localhost:9000', pats)).toBe(false);
+    expect(origins.originAllowed('http://localhost', pats)).toBe(false);
+    expect(origins.originAllowed('http://127.0.0.1:9000', pats)).toBe(false);
   });
   it('refuses other sites, other schemes and junk', () => {
     expect(origins.originAllowed('https://evil.test', pats)).toBe(false);

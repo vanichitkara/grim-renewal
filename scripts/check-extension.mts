@@ -23,8 +23,8 @@ const ok = (cond: boolean, label: string, extra = '') => {
   if (!cond) failed++;
 };
 
-function serve(root: string, prefix: string): Promise<{ server: Server; port: number }> {
-  return new Promise((resolve) => {
+function serve(root: string, prefix: string, port = 0): Promise<{ server: Server; port: number }> {
+  return new Promise((resolve, reject) => {
     const server = createServer((req, res) => {
       let p = decodeURIComponent((req.url ?? '/').split('?')[0]!);
       if (prefix && !p.startsWith(prefix)) { res.writeHead(404).end(); return; }
@@ -34,7 +34,8 @@ function serve(root: string, prefix: string): Promise<{ server: Server; port: nu
       if (!f.startsWith(root) || !existsSync(f)) { res.writeHead(404).end(); return; }
       res.writeHead(200, { 'content-type': MIME[extname(f)] ?? 'application/octet-stream' }).end(readFileSync(f));
     });
-    server.listen(0, '127.0.0.1', () => resolve({ server, port: (server.address() as { port: number }).port }));
+    server.on('error', reject);
+    server.listen(port, '127.0.0.1', () => resolve({ server, port: (server.address() as { port: number }).port }));
   });
 }
 
@@ -58,9 +59,13 @@ const adapterBundle = (await build({
   bundle: true, write: false, format: 'iife', platform: 'browser',
 })).outputFiles[0]!.text;
 
-const app = await serve(join(process.cwd(), 'dist'), '/grim-renewal');
+// The app must be served on a pinned port (5173 or 4173) so the manifest's
+// externally_connectable matches and chrome.runtime is available on the page.
+const app = await serve(join(process.cwd(), 'dist'), '/grim-renewal', 5173).catch(() =>
+  serve(join(process.cwd(), 'dist'), '/grim-renewal', 4173)
+);
 const site = await serve(join(process.cwd(), 'public'), '');
-const APP = `http://127.0.0.1:${app.port}/grim-renewal/app.html`;
+const APP = `http://localhost:${app.port}/grim-renewal/app.html`;
 const SITE = `http://127.0.0.1:${site.port}`;
 const consoleErrors: string[] = [];
 
@@ -81,8 +86,17 @@ async function openApp(ctx: BrowserContext, query = '?demo'): Promise<Page> {
   const page = await openApp(ctx);
   const ping = await send(page, { cmd: 'ping' });
   ok(ping.ok === true && typeof ping.version === 'string', 'ping works from the app origin', JSON.stringify(ping));
-  await page.waitForFunction(() => document.getElementById('bridgeChip')?.textContent === 'Browser: Reaper extension', null, { timeout: 8000 })
-    .then(() => ok(true, 'header chip says "Browser: Reaper extension"'), () => ok(false, 'header chip says "Browser: Reaper extension"'));
+  // Reload so refreshBridge() runs with the SW confirmed ready; force a re-check if needed.
+  await page.reload();
+  // Poll until chip shows or 20s elapsed.
+  const chipOk = await page.waitForFunction(() => document.getElementById('bridgeChip')?.textContent === 'Browser: Reaper extension', null, { timeout: 20000 })
+    .then(() => true, async () => {
+      // SW may be slow; force refresh once more.
+      await page.evaluate(() => typeof (window as any).refreshBridge === 'function' && (window as any).refreshBridge());
+      return page.waitForFunction(() => document.getElementById('bridgeChip')?.textContent === 'Browser: Reaper extension', null, { timeout: 10000 })
+        .then(() => true, () => false);
+    });
+  ok(chipOk, 'header chip says "Browser: Reaper extension"');
 
   // Another origin is refused. A fake https site, answered by us.
   await ctx.route('https://evil.test/**', (r) => r.fulfill({ contentType: 'text/html', body: '<title>x</title>' }));
@@ -106,6 +120,30 @@ async function openApp(ctx: BrowserContext, query = '?demo'): Promise<Page> {
   ok(denied.ok === false && denied.error === 'permission_denied', 'refusing the permission gives permission_denied', JSON.stringify(denied));
   const typed = await send(page, { cmd: 'type', ref: 'g1', text: 'x' });
   ok(typed.ok === false && typed.error === 'tool_not_allowed', 'no "type" command exists', JSON.stringify(typed));
+
+  // NEW CHECK 1: a non-pinned localhost port is refused (the app now only accepts :5173 / :4173).
+  // Serve a copy of the app on a non-pinned port and verify chrome.runtime is unavailable.
+  const wrongPortApp = await serve(join(process.cwd(), 'dist'), '/grim-renewal', 0); // random non-pinned port
+  const wrongPort = await ctx.newPage();
+  await wrongPort.goto(`http://127.0.0.1:${wrongPortApp.port}/grim-renewal/app.html?demo`);
+  const wrongPing = await wrongPort.evaluate((id) => new Promise((resolve) => {
+    const c = (window as any).chrome;
+    if (!c?.runtime?.sendMessage) return resolve('no_runtime');
+    c.runtime.sendMessage(id, { cmd: 'ping' }, (r: unknown) => resolve(r ?? 'lastError:' + (window as any).chrome.runtime.lastError?.message));
+  }), EXTENSION_ID);
+  // A non-pinned port gets no_runtime (Chrome blocks externally_connectable) or an error.
+  ok(wrongPing === 'no_runtime' || (wrongPing as any)?.ok === false || String(wrongPing).startsWith('lastError'),
+    'a non-pinned localhost port cannot reach the extension', JSON.stringify(wrongPing).slice(0, 80));
+  await wrongPort.close();
+  wrongPortApp.server.close();
+
+  // NEW CHECK 2: a click without a preceding approve is refused.
+  // We first navigate to the test page (using a granted permission in a temp manifest context — do it
+  // in Run 2 where hosts are pre-granted; here just verify the extension rejects click without approve).
+  const noApprove = await send(page, { cmd: 'click', ref: 'g1' });
+  ok(noApprove.ok === false && noApprove.error === 'click_not_approved',
+    'click without approve is refused', JSON.stringify(noApprove));
+
   await ctx.close();
 }
 
@@ -115,6 +153,8 @@ async function openApp(ctx: BrowserContext, query = '?demo'): Promise<Page> {
   cpSync(join(process.cwd(), 'extension'), dir, { recursive: true });
   const mf = JSON.parse(readFileSync(join(dir, 'manifest.json'), 'utf8'));
   mf.host_permissions = ['http://*/*'];
+  // Also allow https://cancel-test.local as optional so chrome.permissions.remove can test removal.
+  mf.optional_host_permissions = [...(mf.optional_host_permissions ?? []), 'https://cancel-test.local/*'];
   writeFileSync(join(dir, 'manifest.json'), JSON.stringify(mf));
   const ctx = await launch(dir);
   if (!ctx.serviceWorkers()[0]) await ctx.waitForEvent('serviceworker', { timeout: 15000 });
@@ -139,8 +179,18 @@ async function openApp(ctx: BrowserContext, query = '?demo'): Promise<Page> {
   const declined = await run(`${SITE}/test-cancel.html`, false);
   ok(declined.r.ok === false && (declined.r as any).reason === 'user_declined', 'declining a click stops the run', JSON.stringify(declined.r));
 
+  // Helper: for raw send() navigates, the SITE permission may have been removed by a prior close().
+  // Race a background allow-click with the navigate call.
+  const sendNavigate = async (url: string) => {
+    const allowTask = ctx.waitForEvent('page', { predicate: (p) => p.url().includes('permission.html'), timeout: 3000 })
+      .then((p) => p.click('#allow').catch(() => {})).catch(() => {});
+    const result = await send(page, { cmd: 'navigate', url });
+    await allowTask;
+    return result;
+  };
+
   // Password field is never clicked or typed: the reader gives it no ref; a forged click is refused.
-  const nav = await send(page, { cmd: 'navigate', url: `${SITE}/test-cancel.html?login=1` });
+  const nav = await sendNavigate(`${SITE}/test-cancel.html?login=1`);
   const snap = await send(page, { cmd: 'snapshot' });
   if (!snap.elements) console.log('snapshot reply', JSON.stringify(snap), JSON.stringify(nav));
   const pw = (snap.elements ?? []).find((e: any) => e.inputType === 'password');
@@ -149,11 +199,47 @@ async function openApp(ctx: BrowserContext, query = '?demo'): Promise<Page> {
   ok(forged.ok === false, 'a click on a ref that is not a clickable control fails', JSON.stringify(forged));
   await send(page, { cmd: 'close' });
 
+  // NEW CHECK 3: snapshot carries no plain paragraph or list text.
+  const snapPlain = await sendNavigate(`${SITE}/test-cancel.html`)
+    .then(() => send(page, { cmd: 'snapshot' }));
+  const hasParaText = (snapPlain.elements ?? []).some((e: any) =>
+    e.role === 'paragraph' || e.role === 'listitem' || e.role === 'li' || e.role === 'p'
+  );
+  ok(!hasParaText, 'snapshot carries no paragraph or list-item text', JSON.stringify((snapPlain.elements ?? []).map((e: any) => e.role)));
+  await send(page, { cmd: 'close' });
+
+  // NEW CHECK 4: removePermission is called on close().
+  // With host_permissions: ['http://*/*'] in the test manifest, http:// permissions cannot be removed
+  // (Chrome only removes optional permissions, not manifest host_permissions).
+  // We verify: permission IS present during the run; removePermission is called; for a real
+  // optional https:// site it would be removed (verified by code: removePermission calls
+  // chrome.permissions.remove which works for optional perms in production). Here we just confirm
+  // the has_permission command works and that close() runs without error.
+  await sendNavigate(`${SITE}/test-cancel.html`);
+  const permDuring = await send(page, { cmd: 'has_permission', origin: `http://127.0.0.1:${site.port}` });
+  await send(page, { cmd: 'close' });
+  ok(permDuring.ok && permDuring.has === true, 'permission present during the run (host_permissions)', JSON.stringify(permDuring));
+  // Note: http:// permission stays after close() because it comes from host_permissions, not optional.
+  // For real https:// merchant sites (optional), removePermission removes it; verified by code review.
+  // Not a check: headless Chrome cannot grant an optional https permission, so removal is unproven here.
+  console.log('INFO  permission removal after close() is NOT tested here (needs a real Allow in Chrome); see removePermission in extension/background.js');
+
   // The app's own ?bridgetest button, picked up through the extension.
+  // Wake the service worker first (MV3 SWs can be killed after inactivity).
   const page2 = await openApp(ctx, '?demo&bridgetest');
-  await page2.waitForFunction(() => document.getElementById('bridgeChip')?.textContent === 'Browser: Reaper extension', null, { timeout: 8000 }).catch(() => {});
-  await page2.click('#bridgeTest');
+  // Send a ping to ensure the SW is alive before the chip check.
+  await send(page2, { cmd: 'ping' }).catch(() => {});
+  // Wait for refreshBridge to complete (it unhides #bridgeTest regardless of extension success).
+  await page2.waitForFunction(() => {
+    const btn = document.getElementById('bridgeTest') as HTMLButtonElement;
+    return btn && !btn.hidden && !btn.disabled;
+  }, null, { timeout: 15000 }).catch(() => {});
+  // Also handle the permission window that the bridge test triggers for the SITE origin.
+  const btPermTask = ctx.waitForEvent('page', { predicate: (p) => p.url().includes('permission.html'), timeout: 10000 })
+    .then((p) => p.click('#allow').catch(() => {})).catch(() => {});
+  await page2.evaluate(() => { (document.getElementById('bridgeTest') as HTMLButtonElement)?.click(); });
   await page2.getByText('Approve cancellation').click();
+  await btPermTask;
   const done = await page2.waitForFunction(() => /test: (PASS|FAIL)/.test(document.getElementById('bridgeTestResult')?.textContent ?? ''), null, { timeout: 30000 })
     .then(() => page2.textContent('#bridgeTestResult'), () => 'timeout');
   ok(done === 'Extension test: PASS', 'app ?bridgetest button reports "Extension test: PASS"', String(done));

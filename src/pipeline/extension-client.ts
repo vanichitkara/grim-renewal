@@ -61,15 +61,26 @@ export async function detectExtension(runtime: RuntimeLike | null = defaultRunti
 
 export function createExtensionDriver(runtime: RuntimeLike | null = defaultRuntime()): BrowserDriver {
   const call = (msg: { cmd: string } & Record<string, unknown>) => callExtension(msg, runtime);
+  // Track the last snapshotted element names by ref so approve can pass a name.
+  const nameByRef = new Map<string, string>();
   return {
     async navigate(url) {
+      nameByRef.clear();
       await call({ cmd: 'navigate', url });
     },
     async snapshot() {
       const r = await call({ cmd: 'snapshot' });
-      return { elements: Array.isArray(r.elements) ? r.elements : [] } as PageSnapshot;
+      const elements = Array.isArray(r.elements) ? r.elements : [];
+      nameByRef.clear();
+      for (const e of elements as Array<{ ref?: string; name?: string }>) {
+        if (e.ref) nameByRef.set(e.ref, e.name ?? '');
+      }
+      return { elements } as PageSnapshot;
     },
     async click(ref) {
+      // SHOULD 1: send a one-use approval token to the extension before the click.
+      // The app's confirm() already gated this; this is the in-extension record of that approval.
+      await call({ cmd: 'approve', ref, name: nameByRef.get(ref) ?? '' });
       await call({ cmd: 'click', ref });
     },
     async type() {

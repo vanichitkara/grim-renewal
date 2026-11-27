@@ -39,7 +39,7 @@ describe('callExtension', () => {
 });
 
 describe('createExtensionDriver', () => {
-  it('maps the driver calls onto commands and has no way to type', async () => {
+  it('maps the driver calls onto commands, sending approve before click, and has no way to type', async () => {
     const rt = fake((m) => (m.cmd === 'snapshot' ? { ok: true, elements: [{ ref: 'g1', role: 'button', name: 'Cancel' }] } : { ok: true }));
     const d = createExtensionDriver(rt);
     await d.navigate('https://x.test/');
@@ -47,7 +47,11 @@ describe('createExtensionDriver', () => {
     await d.click('g1');
     await d.close();
     await expect(d.type('g1', 'x')).rejects.toThrow('tool_not_allowed');
-    expect(rt.sent.map((m) => m.cmd)).toEqual(['navigate', 'snapshot', 'click', 'close']);
+    // approve is sent before click (SHOULD 1 one-use token)
+    expect(rt.sent.map((m) => m.cmd)).toEqual(['navigate', 'snapshot', 'approve', 'click', 'close']);
+    // approve carries the ref and name from the last snapshot
+    const approveMsg = rt.sent.find((m) => m.cmd === 'approve');
+    expect(approveMsg).toMatchObject({ ref: 'g1', name: 'Cancel' });
   });
 });
 
