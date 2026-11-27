@@ -2,6 +2,7 @@
   "name": "grim-renewal",
   "version": "0.1.0",
   "description": "Make sure the dead stay dead. Find forgotten subscriptions, cancel them while you watch.",
+  "license": "MIT",
   "private": true,
   "type": "module",
   "scripts": {

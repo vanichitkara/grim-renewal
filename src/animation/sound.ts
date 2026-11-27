@@ -114,6 +114,22 @@ export function noise(dur: number, vol = 0.25, freq = 1200): void {
   src.start();
 }
 
+/**
+ * Settings "Play a test sound": wait until the browser has really started audio, then play a
+ * clear knock and coin at the chosen volume. Says what happened, so a silent click is never a mystery.
+ */
+export async function playTestSound(): Promise<'played' | 'muted' | 'blocked'> {
+  if (muted) return 'muted';
+  const a = audio();
+  if (!a) return 'blocked';
+  try { if (a.state !== 'running') await a.resume(); } catch { /* reported below */ }
+  if (a.state !== 'running') return 'blocked';
+  tone(140, 0.16, 'triangle', 0.5, 70);
+  setTimeout(() => tone(140, 0.16, 'triangle', 0.5, 70), 180);
+  setTimeout(() => { tone(988, 0.1, 'square', 0.12); setTimeout(() => tone(1319, 0.25, 'square', 0.12), 100); }, 420);
+  return 'played';
+}
+
 /** Returns true when user gesture has unlocked audio. */
 export function unlockAudio(): boolean {
   return audio() !== null;

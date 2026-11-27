@@ -59,7 +59,7 @@ export function showApprovalDialog(
 
   const title = document.createElement('h2');
   title.id = 'approval-title';
-  title.textContent = 'Send the Reaper?';
+  title.textContent = sub.trialEndDate ? 'Bury this trial?' : 'Send the Reaper?';
   title.style.cssText = 'margin:0 0 1rem;font-size:1.1rem;color:#ece6d6';
 
   const desc = document.createElement('p');

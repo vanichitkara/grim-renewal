@@ -11,7 +11,7 @@ dist/
 *.pem
 *.key
 
-# tokens and test credentials (the app keeps tokens in memory only)
+# tokens and test credentials (the app keeps the Google token only in the browser, see .kiro/steering/privacy.md)
 *token*.txt
 gmail-test-*
 
@@ -27,3 +27,6 @@ gmail-test-*
 *.log
 .vite/
 coverage/
+
+# Playwright MCP snapshots (local bridge runs)
+.playwright-mcp/

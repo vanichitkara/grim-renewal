@@ -28,6 +28,9 @@ export interface BrowserDriver {
   close(): Promise<void>;
 }
 
+/** Short failure codes the bridge client may throw; anything else reports as browser_error. */
+const KNOWN_ERRORS = new Set(['browser_crashed', 'bad_tool_args', 'browser_not_installed', 'browser_timeout', 'mcp_error', 'unauthorized', 'tool_not_allowed', 'password_refused']);
+
 const MAX_STEPS = 8;
 const FIRST_STEP = /cancel|end membership|turn off|unsubscribe/i;
 const LATER_STEP = /confirm|yes|continue|submit/i;
@@ -73,8 +76,10 @@ export function createBrowserAdapter(makeDriver: () => BrowserDriver): CancelAda
       const last = await driver.snapshot();
       if (last.elements.some((e) => DONE.test(e.name))) return { ok: true };
       return { ok: false, reason: 'step_limit' };
-    } catch {
-      return { ok: false, reason: 'browser_error' };
+    } catch (e) {
+      // A short code from the bridge client (browser_crashed, bad_tool_args, ...), never page text.
+      const code = e instanceof Error && KNOWN_ERRORS.has(e.message) ? e.message : 'browser_error';
+      return { ok: false, reason: code };
     } finally {
       try {
         await driver.close();
@@ -85,7 +90,10 @@ export function createBrowserAdapter(makeDriver: () => BrowserDriver): CancelAda
   };
 }
 
-/** Thin mapping onto Playwright MCP tools. Not tested against a live server. */
+/**
+ * Thin mapping onto Playwright MCP tools. Checked against @playwright/mcp 0.0.85:
+ * click and type take `target` (the snapshot ref). `ref` is sent too for older versions.
+ */
 export function createPlaywrightMcpDriver(
   call: (tool: string, args: object) => Promise<unknown>,
 ): BrowserDriver {
@@ -97,10 +105,10 @@ export function createPlaywrightMcpDriver(
       return parseSnapshot(await call('browser_snapshot', {}));
     },
     async click(ref) {
-      await call('browser_click', { element: ref, ref });
+      await call('browser_click', { element: ref, target: ref, ref });
     },
     async type(ref, text) {
-      await call('browser_type', { element: ref, ref, text });
+      await call('browser_type', { element: ref, target: ref, ref, text });
     },
     async close() {
       await call('browser_close', {});

@@ -5,15 +5,18 @@
 import { createServer } from 'node:http';
 import { randomBytes } from 'node:crypto';
 import { existsSync, readFileSync, writeFileSync, chmodSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { parseEnv, upsertEnv, isValidBridgeKey } from '../src/server/env-file.ts';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
-import { decide, matchOrigin } from '../src/server/bridge-core.ts';
+import { decide, matchOrigin, LIVE_APP_URL } from '../src/server/bridge-core.ts';
 
-const PORT = 8787;
+// GRIM_BRIDGE_PORT is for tests only; the app always calls 8787.
+const PORT = Number(process.env['GRIM_BRIDGE_PORT']) || 8787;
 // The key lives in .env (git-ignored) so it stays the same between runs and the dev page connects by itself.
 // An environment variable wins over the file. First run with no key: make one and save it.
-const ENV_PATH = new URL('../.env', import.meta.url).pathname;
+// fileURLToPath, not .pathname: the project folder has a space, which .pathname keeps as %20.
+const ENV_PATH = fileURLToPath(new URL('../.env', import.meta.url));
 const fileText = existsSync(ENV_PATH) ? readFileSync(ENV_PATH, 'utf8') : '';
 const fromFile = parseEnv(fileText)['GRIM_BRIDGE_TOKEN'];
 let token: string | undefined = process.env['GRIM_BRIDGE_TOKEN'];
@@ -40,6 +43,10 @@ const server = createServer((req, res) => {
     res.setHeader('Vary', 'Origin');
     res.setHeader('Access-Control-Allow-Headers', 'content-type, x-bridge-token');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    // Chrome asks before a public site (the live https page) may reach 127.0.0.1 (Private Network Access).
+    if (req.headers['access-control-request-private-network'] === 'true') {
+      res.setHeader('Access-Control-Allow-Private-Network', 'true');
+    }
   }
   const send = (status: number, json: object): void => {
     res.writeHead(status, { 'content-type': 'application/json' });
@@ -84,8 +91,10 @@ const server = createServer((req, res) => {
 
 server.listen(PORT, '127.0.0.1', () => {
   console.log(`Grim bridge on http://127.0.0.1:${PORT}`);
-  console.log('Open this link (the page saves the token, then hides it):');
-  console.log(`  http://localhost:5173/app.html#bridge=${token}`);
+  console.log('Open one of these links (the page saves the key for this tab, then hides it):');
+  console.log(`  On your computer:  http://localhost:5173/app.html#bridge=${token}`);
+  console.log(`  On the live site:  ${LIVE_APP_URL}#bridge=${token}`);
+  console.log('On the live site, Chrome may ask to allow access to devices on your network. Allow it.');
 });
 
 process.on('SIGINT', () => {

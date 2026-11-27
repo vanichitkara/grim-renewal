@@ -221,7 +221,7 @@ a.btn:focus-visible, .kit-box a:focus-visible, .kit-box textarea:focus-visible {
 .gate .consent-extra { font-size: 13px; color: var(--mist); }
 
 /* Sign-in gate: until the user signs in (or opens ?demo) only the header and this card show. */
-body.locked .wrap > :not(header):not(#loginGate):not(script) { display: none !important; }
+body.locked .wrap > :not(header):not(#loginGate):not(#guideGhost):not(script) { display: none !important; }
 body.locked .proto, body.locked #bridgeChip, body.locked #scanStatus, body.locked #connectGmail { display: none !important; }
 .gate { background: var(--crypt); border: 2px solid var(--stone); border-radius: 4px; padding: 28px 24px; display: grid; gap: 14px; max-width: 640px; margin: 8px auto 0; text-align: center; justify-items: center; }
 .gate h2 { margin: 0; font-family: var(--display); font-size: clamp(22px, 4vw, 30px); }
@@ -229,6 +229,34 @@ body.locked .proto, body.locked #bridgeChip, body.locked #scanStatus, body.locke
 .gate .consent { color: var(--bone); border: 1px dashed var(--stone); border-radius: 3px; padding: 12px 14px; font-size: 14px; }
 .gate .gate-msg { color: var(--blood); min-height: 1.4em; }
 .gate button { font-size: 16px; padding: 12px 22px; }
+
+/* Title goes home; footer for the open app (hidden while locked) */
+h1 .home-link { color: inherit; text-decoration: none; }
+h1 .home-link:hover { color: var(--coin); }
+.site-foot { border-top: 2px solid var(--stone); margin-top: 24px; padding: 24px 0 32px; color: var(--mist); text-align: center; display: grid; gap: 6px; }
+.site-foot p { margin: 0; }
+.site-foot a, .site-foot .linklike { color: var(--mist); margin: 0 6px; }
+.site-foot a:hover, .site-foot .linklike:hover { color: var(--coin); }
+.foot-brand { font-family: var(--brand); font-weight: 700; font-size: 20px; color: var(--bone) !important; text-decoration: none; }
+.linklike { background: none; border: 0; padding: 0; font: inherit; text-decoration: underline; cursor: pointer; letter-spacing: 0; }
+body.locked .site-foot { display: none; }
+h1 .home-link:focus-visible, .site-foot a:focus-visible { outline: 2px solid var(--coin); outline-offset: 2px; }
+
+/* Guide ghost: sits in the page flow under the header, so it never covers the scene or a button */
+.guide-ghost { display: flex; align-items: flex-start; gap: 10px; max-width: 640px; }
+.gg-sprite { flex: none; width: 36px; height: 36px; margin-top: 4px; }
+.gg-sprite svg { display: block; }
+.gg-body { fill: var(--spirit); }
+.gg-dark { fill: var(--night); }
+.gg-bubble { position: relative; flex: 1 1 auto; min-width: 0; background: var(--crypt); border: 1px solid var(--spirit); border-radius: 6px; padding: 8px 12px; display: grid; gap: 8px; justify-items: start; }
+.gg-bubble::before { content: ""; position: absolute; left: -6px; top: 14px; border: 6px solid transparent; border-left: 0; border-right-color: var(--spirit); }
+.gg-text { margin: 0; color: var(--bone); font-size: 14px; overflow-wrap: anywhere; }
+.gg-go { font-size: 13px; padding: 5px 10px; background: var(--spirit); }
+.gg-x { flex: none; font-size: 16px; line-height: 1; padding: 4px 9px; }
+@media (prefers-reduced-motion: no-preference) {
+  .gg-sprite { animation: gg-bob 2.4s ease-in-out infinite; }
+  @keyframes gg-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+}
 
 /* Settings dialog */
 .settings { padding: 0; border: 1px solid var(--stone); border-radius: 4px; background: var(--crypt); color: var(--bone); width: min(420px, calc(100vw - 32px)); }
@@ -249,7 +277,7 @@ body.locked .proto, body.locked #bridgeChip, body.locked #scanStatus, body.locke
 <div class="wrap">
   <header>
     <div>
-      <h1>💀 Grim Renewal</h1>
+      <h1><a class="home-link" href="./" title="Back to the home page">💀 Grim Renewal</a></h1>
       <p class="tagline">Make sure the dead stay dead. Every forgotten subscription is a zombie. The Reaper goes knocking — and waits for the result before swinging.</p>
     </div>
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
@@ -260,6 +288,8 @@ body.locked .proto, body.locked #bridgeChip, body.locked #scanStatus, body.locke
       <span id="bridgeChip" role="status" hidden style="font-family:var(--display);font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--mist);">Browser: checking…</span>
     </div>
   </header>
+
+  <div id="guideGhost" hidden></div>
 
   <section id="loginGate" class="gate" hidden aria-labelledby="gateH">
     <h2 id="gateH">The crypt is locked</h2>
@@ -351,7 +381,8 @@ body.locked .proto, body.locked #bridgeChip, body.locked #scanStatus, body.locke
     <div class="cards trials" id="trialCards" style="margin-top:12px"></div>
   </section>
   <div class="btnrow"><button id="raiseRevenant" type="button" class="ghost" hidden>Show a cancelled charge coming back</button>
-    <button id="bridgeTest" type="button" class="ghost" hidden>Test the browser bridge</button></div>
+    <button id="bridgeTest" type="button" class="ghost" hidden>Test the browser bridge</button>
+    <span id="bridgeTestResult" class="note" role="status" aria-live="polite" hidden></span></div>
   <p id="graveyardLive" class="sr-only" aria-live="polite" aria-atomic="true"></p>
 
   <details id="tuningPanel">
@@ -369,11 +400,16 @@ body.locked .proto, body.locked #bridgeChip, body.locked #scanStatus, body.locke
     <div class="state">State machine: <b id="stateName">idle</b> <span id="stateSub"></span></div>
   </details>
 
-  <p class="note">All pixel art is original and drawn by script. In the demo, the subscriptions and cancels are made up. The animation waits for the result before choosing kill or retreat. Savings that count are the ones shown at the top: avoided charges are only counted after a receipt gap or a cancellation you told us about.</p>
+  <footer class="site-foot" aria-label="Site">
+    <a class="foot-brand" href="./">Grim Renewal</a>
+    <p>Make sure the dead stay dead.</p>
+    <p><a href="./">Home</a> · <a href="./#privacy">Privacy</a> · <button type="button" class="linklike" id="footSettings">Settings</button></p>
+  </footer>
 </div>
 
 <!-- aria-live region for screen readers -->
 <div id="ariaLive" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+<div id="ghostLive" class="sr-only" aria-live="polite" aria-atomic="true"></div>
 
 <script type="module">
 import { initHallway, setCancelHandler, onHordeChange, setView, advanceDay, tune, celebrateVerified, setSlotLabel } from '../animation/hallway.ts';
@@ -384,6 +420,8 @@ import { showApprovalDialog } from './approval-dialog.ts';
 import { runPipeline } from '../pipeline/pipeline.ts';
 import { showEmailEntry } from './email-entry.ts';
 import { createPotionLoader } from './potion-loader.ts';
+import { mountGhost } from './guide-ghost.ts';
+import { MSG, scanErrorMessage } from './messages.ts';
 import { fetchProfileEmail } from '../pipeline/gmail-profile.ts';
 import { setAdapters } from '../agents/reaper.ts';
 import { redirectUriFor } from '../pipeline/oauth-redirect.ts';
@@ -401,8 +439,10 @@ intakeBridgeToken(); // strips #bridge= from the URL; leaves other hash params (
 const bridgeChip = document.getElementById('bridgeChip');
 async function refreshBridge() {
   const v = chipView(await connectBridge(), location.hostname);
+  // In the demo, hide the "run npm run bridge" setup hint: it is a terminal command, not a next step for a visitor.
+  const demoSetupHint = new URLSearchParams(location.search).has('demo') && !/connected/i.test(v.text);
   bridgeChip.textContent = v.text;
-  bridgeChip.hidden = v.hidden;
+  bridgeChip.hidden = v.hidden || demoSetupHint;
 }
 document.getElementById('bridgeTok').addEventListener('keydown', (e) => {
   if (e.key !== 'Enter') return;
@@ -422,13 +462,17 @@ document.getElementById('bridgeTok').addEventListener('keydown', (e) => {
         accountEmail: 'test@example.com', cancelUrl: new URL('./test-cancel.html', location.href).href + (q.has('login') ? '?login=1' : ''),
         phoneOnly: false, phone: null, memberId: null, forgottenScore: 0.5, state: 'idle', stateChangedAt: new Date().toISOString(),
       };
+      // Show the result beside the button (the header chip is far above, off screen) and in the header.
+      const out = document.getElementById('bridgeTestResult');
+      const say = (t) => { out.hidden = false; out.textContent = t; bridgeChip.hidden = false; bridgeChip.textContent = t; };
       showApprovalDialog(sub, async () => {
+        await refreshBridge(); // pick up a bridge started after the page opened
         const adapter = getBrowserAdapter();
-        if (!adapter) { bridgeChip.textContent = 'Bridge test: FAIL (no key)'; return; }
-        bridgeChip.textContent = 'Bridge test: running…';
+        if (!adapter) { say('Bridge test: FAIL (no bridge key. Open the #bridge= link that npm run bridge printed)'); return; }
+        say('Bridge test: running… watch the new Chrome window');
         const r = await adapter(sub, async () => true);
         const want = q.has('login') ? (!r.ok && r.reason === 'login_required') : r.ok;
-        bridgeChip.textContent = 'Bridge test: ' + (want ? 'PASS' : 'FAIL (' + (r.ok ? 'ok' : r.reason) + ')');
+        say('Bridge test: ' + (want ? 'PASS' : 'FAIL (' + (r.ok ? 'ok' : r.reason) + ')'));
       }, () => {});
     });
   }
@@ -644,6 +688,33 @@ subscribe((e) => {
 
 onHordeChange(renderHorde);
 
+// ── Guide ghost: one hint from the real state; the button does that action ──
+let scanState = 'idle'; // idle | busy | done | error. Set by the scan below.
+const ghost = mountGhost(document.getElementById('guideGhost'), document.getElementById('ghostLive'), (a) => {
+  switch (a.kind) {
+    case 'connect': (document.body.classList.contains('locked') ? document.getElementById('gateConnect') : document.getElementById('connectGmail'))?.click(); break;
+    case 'reap': { const s = allSubs.find((x) => x.id === a.id); if (s) askApproval([s]); break; }
+    case 'bury': { const t = lastTrials.find((x) => x.sub.id === a.id); if (t) askApproval([t.sub]); break; }
+    case 'kit': dashboard.openKit(a.id); break;
+    case 'list': document.getElementById('showList').click(); document.getElementById('listView').focus(); break;
+    case 'dismiss': document.querySelector('#guideGhost .gg-x')?.click(); break;
+  }
+});
+function refreshGhost() {
+  const host = document.getElementById('guideGhost');
+  const locked = document.body.classList.contains('locked');
+  ghost.update({
+    locked,
+    scanning: scanState === 'busy',
+    scanError: scanState === 'error',
+    subs: allSubs.map((s) => ({ id: s.id, merchant: s.merchant, status: dashboard.statusOf(s.id)?.word ?? 'Found', forgottenScore: s.forgottenScore, chargeCount: s.chargeCount, billingCycle: s.billingCycle })),
+    trials: lastTrials.map((t) => ({ id: t.sub.id, merchant: t.sub.merchant, days: t.days, status: t.status })),
+  });
+  // Keep the "dismissed" choice: update() does not unhide.
+  if (host.hidden && sessionStorage.getItem('grim_ghost_off') !== '1') host.hidden = false;
+}
+setInterval(refreshGhost, 1000); // cheap and pure: picks up reaper events and status changes
+
 // ── OAuth implicit-flow token check ─────────────────────────────────────────
 // Runs before demo fallback so a returning OAuth redirect takes priority.
 
@@ -678,6 +749,28 @@ initSettings(document.getElementById('openSettings'), {
     sessionStorage.removeItem('grim_simulate');
   },
 });
+// The footer's Settings link opens the same panel.
+document.getElementById('footSettings')?.addEventListener('click', () => document.getElementById('openSettings').click());
+
+// Start Google sign-in. The gate button and the header button both use this.
+function signIn() {
+  showConsentBanner(
+    // onApprove: redirect to Google OAuth
+    () => {
+      // window.GRIM_CLIENT_ID is set by the script tag at the top of this page.
+      const clientId = window.GRIM_CLIENT_ID;
+      if (!clientId) {
+        alert('GRIM_CLIENT_ID is not set. Define window.GRIM_CLIENT_ID in a script tag before this module.');
+        return;
+      }
+      if (new URLSearchParams(location.search).has('simulate')) sessionStorage.setItem('grim_simulate', '1');
+      location.href = buildAuthUrl({ clientId, redirectUri: redirectUriFor(location), loginHint: savedAuth?.email });
+    },
+    // onDeny: do nothing
+    () => {},
+  );
+}
+
 
 if (oauthToken) {
   document.body.classList.remove('locked'); // signed in: open the crypt
@@ -687,7 +780,7 @@ if (oauthToken) {
   // Hide Connect Gmail button; show scanning status.
   const connectBtn = document.getElementById('connectGmail');
   const scanStatus = document.getElementById('scanStatus');
-  if (connectBtn) connectBtn.hidden = true;
+  if (connectBtn) { connectBtn.hidden = true; connectBtn.addEventListener('click', signIn); }
   if (scanStatus) scanStatus.hidden = false;
 
   // Real mode: no cancel handler. Hallway adds doors from `discovered` events and
@@ -721,22 +814,21 @@ if (oauthToken) {
     const loader = createPotionLoader(document.getElementById('stageWrap').parentElement.insertBefore(
       document.createElement('div'), document.getElementById('stageWrap')));
     // Say what happened. Never claim success on a failed or empty scan.
+    scanState = 'busy';
     runPipeline(oauthToken, accountEmail, (p) => loader.update(p), (r) => dashboard.setSweep(r)).then(
       (count) => {
+        scanState = 'done';
         loader.done(count);
         if (!scanStatus) return;
         scanStatus.textContent = count > 0
           ? 'Scan complete · ' + count + ' found'
-          : 'No subscriptions found in the last 13 months.';
+          : MSG.scanEmpty;
       },
       (err) => {
         const msg = String(err && err.message || err);
-        const code = (/\b(401|403|429)\b/.exec(msg) || [])[1];
-        const hint = code === '401' ? 'Token expired. Connect again.'
-          : code === '403' ? 'Gmail API is off, or this account is not a test user.'
-          : code === '429' ? 'Gmail rate limit. Try again soon.'
-          : 'Scan failed.';
+        const { code, text: hint } = scanErrorMessage(msg);
         if (code === '401') dropToken(localStorage); // dead token: the next load re-auths silently
+        scanState = 'error';
         loader.fail(hint);
         if (scanStatus) { scanStatus.hidden = false; scanStatus.textContent = hint; }
         const connect = document.getElementById('connectGmail');
@@ -752,25 +844,6 @@ if (oauthToken) {
 
 } else {
   const qs = new URLSearchParams(location.search);
-
-  // Start Google sign-in. The gate button and the header button both use this.
-  function signIn() {
-    showConsentBanner(
-      // onApprove: redirect to Google OAuth
-      () => {
-        // window.GRIM_CLIENT_ID is set by the script tag at the top of this page.
-        const clientId = window.GRIM_CLIENT_ID;
-        if (!clientId) {
-          alert('GRIM_CLIENT_ID is not set. Define window.GRIM_CLIENT_ID in a script tag before this module.');
-          return;
-        }
-        if (qs.has('simulate')) sessionStorage.setItem('grim_simulate', '1');
-        location.href = buildAuthUrl({ clientId, redirectUri: redirectUriFor(location), loginHint: savedAuth?.email });
-      },
-      // onDeny: do nothing
-      () => {},
-    );
-  }
 
   if (qs.has('demo')) {
     // ── Demo mode: fake subscriptions, no sign-in. Only with ?demo. ────────────
@@ -804,21 +877,22 @@ if (oauthToken) {
     if (authError) {
       // A silent re-auth that needs a click is not a failure: just ask the user to connect.
       gateMsg.textContent = isSilentMiss(authError)
-        ? 'Your sign-in ran out. Press Connect Gmail to continue.'
-        : 'Sign-in did not finish. Press Connect Gmail to try again.';
+        ? MSG.signInExpired
+        : MSG.signInUnfinished;
       history.replaceState(null, '', location.pathname + location.search);
     } else if (window.GRIM_CLIENT_ID && shouldTrySilent(savedAuth, sessionStorage, authNow)) {
       // Signed in before and never signed out, but the token expired: ask Google with no screen.
       // One try per tab (markSilentTried), so this can never loop.
       markSilentTried(sessionStorage);
       if (qs.has('simulate')) sessionStorage.setItem('grim_simulate', '1');
-      gateMsg.textContent = 'Signing you back in…';
+      gateMsg.textContent = MSG.signingBackIn;
       location.replace(buildAuthUrl({ clientId: window.GRIM_CLIENT_ID, redirectUri: redirectUriFor(location), silent: true, loginHint: savedAuth?.email }));
     }
   }
 }
 
 refreshBridge();
+refreshGhost();
 </script>
 </body>
 </html>

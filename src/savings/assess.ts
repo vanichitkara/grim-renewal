@@ -143,10 +143,14 @@ export function assessCancellation(input: {
 
     const kMin = Math.max(1, Math.ceil((basisDay - lastDay) / gap));
     const missed = overdue(kMin);
-    const verified = today >= basisDay + gap;
+    // Apple, Google, PayPal and friends bill many things from one sender: a quiet cycle there
+    // proves nothing about THIS subscription, so it can be confirmed but never verified.
+    const viaProcessor = isProcessor(sub.senderDomain);
+    const verified = today >= basisDay + gap && !viaProcessor;
     const notes = [basisText];
     if (missed > 0) notes.push(`No receipt since ${fmt(last)}. ${renewalsText(missed)}`);
-    notes.push(verified ? 'No charge seen for a full cycle.' : 'Waiting for a full billing cycle with no charge.');
+    if (viaProcessor) notes.push(`Billed through ${sub.senderDomain}, so we can't verify it from receipts. Check your ${sub.senderDomain} subscriptions page.`);
+    else notes.push(verified ? 'No charge seen for a full cycle.' : 'Waiting for a full billing cycle with no charge.');
     return {
       level: verified ? 'verified' : 'confirmed',
       display: verified ? DISPLAY.verified : basis === 'email' ? 'Cancellation email seen' : 'You marked it cancelled',
