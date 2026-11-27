@@ -30,6 +30,9 @@ describe('matchOrigin', () => {
   it('echoes only allow-listed origins', () => {
     expect(matchOrigin('http://localhost:5173')).toBe('http://localhost:5173');
     expect(matchOrigin('http://127.0.0.1:5173')).toBe('http://127.0.0.1:5173');
+    expect(matchOrigin('https://vanichitkara.github.io')).toBe('https://vanichitkara.github.io');
+    expect(matchOrigin('https://vanichitkara.github.io.evil.test')).toBeUndefined();
+    expect(matchOrigin('http://vanichitkara.github.io')).toBeUndefined();
     expect(matchOrigin('http://evil.test')).toBeUndefined();
     expect(matchOrigin(undefined)).toBeUndefined();
   });

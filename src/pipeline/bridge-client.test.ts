@@ -48,12 +48,25 @@ describe('bridgeErrorCode', () => {
 });
 
 describe('connectBridge', () => {
-  it('never probes 127.0.0.1 from a hosted page', async () => {
+  it('never probes 127.0.0.1 from a hosted page without a saved key', async () => {
     const { connectBridge } = await import('./bridge-client.ts');
     const f = vi.fn();
     vi.stubGlobal('fetch', f);
     expect(await connectBridge('vanichitkara.github.io')).toBe('not_found');
     expect(f).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+});
+
+describe('connectBridge on the live site', () => {
+  it('probes once the user opened the bridge link (key saved for this tab)', async () => {
+    const { connectBridge, STORE_KEY } = await import('./bridge-client.ts');
+    const store = new Map<string, string>([[STORE_KEY, 'k'.repeat(20)]]);
+    vi.stubGlobal('sessionStorage', { getItem: (k: string) => store.get(k) ?? null, setItem: () => {}, removeItem: () => {} });
+    const f = vi.fn().mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    vi.stubGlobal('fetch', f);
+    expect(await connectBridge('vanichitkara.github.io')).toBe('connected');
+    expect(f).toHaveBeenCalledWith('http://127.0.0.1:8787/health', { headers: { 'x-bridge-token': 'k'.repeat(20) } });
     vi.unstubAllGlobals();
   });
 });

@@ -46,7 +46,8 @@ export function saveBridgeToken(t: string): void {
 }
 
 export function getBridgeToken(): string {
-  const s = sessionStorage.getItem(STORE_KEY);
+  let s: string | null = null;
+  try { s = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(STORE_KEY) : null; } catch { /* blocked */ }
   if (s) return s;
   const g = (globalThis as { GRIM_BRIDGE_TOKEN?: unknown }).GRIM_BRIDGE_TOKEN;
   if (typeof g === 'string' && g) return g;
@@ -99,13 +100,13 @@ export function chipView(status: BridgeStatus, hostname: string): { text: string
 }
 
 /**
- * Probes /health, but only on localhost: the bridge runs on the user's own computer, and a hosted
- * page probing 127.0.0.1 logs a console error and can trigger Chrome's local-network prompt.
- * Registers the browser adapter on success.
+ * Probes /health. On localhost, always. On the live site, only after the user opened the bridge's
+ * printed link (a key is saved for this tab): a visitor without the bridge never gets a console
+ * error or Chrome's local-network prompt. Registers the browser adapter on success.
  */
 export async function connectBridge(hostname: string = typeof location !== 'undefined' ? location.hostname : ''): Promise<BridgeStatus> {
-  if (!isLocalHost(hostname)) return 'not_found';
   const s = getBridgeToken();
+  if (!isLocalHost(hostname) && !s) return 'not_found';
   try {
     const h = await fetch(`${BRIDGE}/health`, { headers: { 'x-bridge-token': s } });
     if (h.status === 401) return 'wrong_token';

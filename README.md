@@ -164,7 +164,12 @@ Where the key lives:
   because a built site is public.
 - Do not add it to Vercel or GitHub as a `VITE_` variable. Anything the browser can read is public.
 
-The bridge listens on 127.0.0.1 only and accepts pages from `localhost:5173` and `127.0.0.1:5173`.
+The bridge listens on 127.0.0.1 only and accepts pages from `localhost:5173`, `127.0.0.1:5173` and the live site
+(`https://vanichitkara.github.io`). Every call still needs the key.
+
+**Use it from the live site:** run `npm run bridge`, then open the "On the live site" link it prints.
+Chrome may ask to allow access to devices on your network: allow it. The key is kept for that tab only.
+Visitors who never open the link are never asked, and the live page does not look for the bridge.
 Never automated: password fields (login pages stop the run) and any click you have not approved.
 Without the bridge, browser cancels stay off and the Boss Door guide is used instead.
 

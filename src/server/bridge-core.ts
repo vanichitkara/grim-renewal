@@ -3,7 +3,10 @@
  * No I/O here, so it is unit-testable. Privacy: nothing is logged.
  */
 
-export const ALLOWED_ORIGINS: readonly string[] = ['http://localhost:5173', 'http://127.0.0.1:5173'];
+/** The dev server and the live site. The key is still required on every call. */
+export const LIVE_SITE = 'https://vanichitkara.github.io';
+export const LIVE_APP_URL = `${LIVE_SITE}/grim-renewal/app.html`;
+export const ALLOWED_ORIGINS: readonly string[] = ['http://localhost:5173', 'http://127.0.0.1:5173', LIVE_SITE];
 
 /** Returns the origin to echo in CORS headers, or undefined. Never a wildcard. */
 export function matchOrigin(origin: string | undefined): string | undefined {
