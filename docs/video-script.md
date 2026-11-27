@@ -8,7 +8,7 @@ Upload to YouTube as **Public**.
 ## Before you record
 
 - Sign in once with the seeded **test** Gmail account (never a real inbox, `privacy.md`). Refresh: you stay signed in.
-- Run `npm run bridge` and `npm run dev`, open `http://localhost:5173/app.html?simulate&debug`, signed in with the test account.
+- Load the Reaper extension (`chrome://extensions`, Load unpacked; README "Browser cancels") so the chip says "Browser: Reaper extension". No terminal needed on the live site. Or run `npm run bridge` and `npm run dev`, open `http://localhost:5173/app.html?simulate&debug`, signed in with the test account.
   Fallback only if sign-in breaks: `app.html?demo&many&debug`. The demo has no sign-in, so it breaks the "start logged in" rule; use it only for shots 3 to 8.
 - Shot 5 needs a failed cancel on purpose: open the Tuning panel (Ctrl+Shift+D) and tick "Make every cancellation fail". Untick it after.
 - Settings → Sound on, volume about 60%. Browser zoom 110%. Hide bookmarks and other tabs.

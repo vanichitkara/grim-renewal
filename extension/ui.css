@@ -1,0 +1,6 @@
+body { margin: 0; padding: 16px; width: 360px; background: #120e1c; color: #ece6d6; font: 15px/1.5 system-ui, sans-serif; }
+h1 { font-size: 18px; margin: 0 0 8px; color: #c99bff; }
+.small { color: #a59cbc; font-size: 13px; }
+button { font: inherit; padding: 8px 14px; margin-right: 8px; border: 2px solid #f2b84b; background: #f2b84b; color: #120e1c; cursor: pointer; }
+button.ghost { background: transparent; color: #ece6d6; border-color: #2a2240; }
+button:focus-visible { outline: 2px solid #f2b84b; outline-offset: 2px; }

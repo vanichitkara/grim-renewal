@@ -14,6 +14,7 @@ Each feature is a folder with the three Kiro spec files: `requirements.md` (user
 | [`cancel-kit`](cancel-kit/) | Results-first header, List view, Cancel kit tabs, trial reminder. | `privacy.md` |
 | [`mansion-scene`](mansion-scene/) | The canvas mansion, paging, reaper travel, graveyard. | `animation.md` |
 | [`sign-in-and-settings`](sign-in-and-settings/) | Google sign-in until sign out, silent re-auth, Settings panel. | `privacy.md` |
+| [`chrome-extension`](chrome-extension/) | The Reaper extension: cancel in the user's own Chrome from the live site. | `privacy.md` |
 
 Steering files are in `.kiro/steering/`: `privacy.md` (Gmail scope, storage, consent text) and `animation.md` (canvas, timing, palette, accessibility). Hooks are in `.kiro/hooks/`.
 

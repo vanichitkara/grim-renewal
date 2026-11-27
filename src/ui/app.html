@@ -432,12 +432,16 @@ import { createCancelPlayerAdapter } from './cancel-player.ts';
 import { emit, subscribe } from '../agents/event-bus.ts';
 import { raiseRevenant } from './demo-data.ts';
 import { intakeBridgeToken, saveBridgeToken, connectBridge, getBrowserAdapter, chipView } from '../pipeline/bridge-client.ts';
+import { connectExtension, getExtensionAdapter, EXTENSION_CHIP } from '../pipeline/extension-client.ts';
 
 // ── Browser bridge: key from the printed link, chip, paste box, ?bridgetest ──
 // The key is a local per-run secret (not a Gmail token). Never logged; sent only to 127.0.0.1:8787.
 intakeBridgeToken(); // strips #bridge= from the URL; leaves other hash params (OAuth) alone
 const bridgeChip = document.getElementById('bridgeChip');
+let viaExtension = false; // the Reaper extension wins over the local bridge
 async function refreshBridge() {
+  viaExtension = await connectExtension();
+  if (viaExtension) { bridgeChip.textContent = EXTENSION_CHIP; bridgeChip.hidden = false; return; }
   const v = chipView(await connectBridge(), location.hostname);
   // In the demo, hide the "run npm run bridge" setup hint: it is a terminal command, not a next step for a visitor.
   const demoSetupHint = new URLSearchParams(location.search).has('demo') && !/connected/i.test(v.text);
@@ -467,12 +471,13 @@ document.getElementById('bridgeTok').addEventListener('keydown', (e) => {
       const say = (t) => { out.hidden = false; out.textContent = t; bridgeChip.hidden = false; bridgeChip.textContent = t; };
       showApprovalDialog(sub, async () => {
         await refreshBridge(); // pick up a bridge started after the page opened
-        const adapter = getBrowserAdapter();
-        if (!adapter) { say('Bridge test: FAIL (no bridge key. Open the #bridge= link that npm run bridge printed)'); return; }
-        say('Bridge test: running… watch the new Chrome window');
+        const adapter = viaExtension ? getExtensionAdapter() : getBrowserAdapter();
+        const via = viaExtension ? 'Extension' : 'Bridge';
+        if (!adapter) { say('Bridge test: FAIL (no extension, and no bridge key. Open the #bridge= link that npm run bridge printed)'); return; }
+        say(via + ' test: running… watch the new Chrome tab');
         const r = await adapter(sub, async () => true);
         const want = q.has('login') ? (!r.ok && r.reason === 'login_required') : r.ok;
-        say('Bridge test: ' + (want ? 'PASS' : 'FAIL (' + (r.ok ? 'ok' : r.reason) + ')'));
+        say(via + ' test: ' + (want ? 'PASS' : 'FAIL (' + (r.ok ? 'ok' : r.reason) + ')'));
       }, () => {});
     });
   }

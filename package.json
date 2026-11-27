@@ -15,7 +15,9 @@
     "bridge:check": "tsx server/bridge-check.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext .ts,.tsx",
-    "community": "tsx server/community-api.ts"
+    "community": "tsx server/community-api.ts",
+    "extension:zip": "tsx scripts/pack-extension.mts",
+    "extension:check": "tsx scripts/check-extension.mts"
   },
   "dependencies": {
     "fast-check": "3.22.0"

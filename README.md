@@ -142,7 +142,23 @@ docs/
   specs/                        Build-wave plan and review reports
 ```
 
-## Browser cancels (optional, on your own computer)
+## Browser cancels (optional)
+
+### Easiest: the Reaper extension (no terminal)
+
+It lets the live site cancel in your own signed-in Chrome.
+
+1. Get `grim-renewal-reaper.zip` (the GitHub release, or `npm run extension:zip` and take `dist-extension/grim-renewal-reaper.zip`). Unzip it.
+2. Open `chrome://extensions`, turn on **Developer mode**, press **Load unpacked**, pick the unzipped folder.
+3. Open the app. The header chip says "Browser: Reaper extension". (Reload the app tab if it was open before.)
+4. Approve a cancellation. The first time for each site, a small window asks "Allow this site". Press Allow.
+
+What it can do: open ONE tab, read the buttons and headings on that page, click what you approved.
+What it cannot do: type, fill or read passwords, read other tabs, or send anything anywhere. If a page asks you to sign in, it stops and you sign in yourself.
+Privacy: it only listens to this app (the live site, localhost). It asks for access to one website at a time and stores no page text.
+Check it: `npx vite build && npm run extension:check` (real Chromium). Not on the Chrome Web Store yet; load-unpacked only.
+
+### Backup: the local bridge (on your own computer)
 
 The browser bridge is a small program that runs on YOUR machine and opens a visible Playwright browser.
 A website on the internet cannot reach it, so a hosted copy of this app never shows a bridge message.

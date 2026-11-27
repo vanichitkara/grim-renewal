@@ -29,7 +29,7 @@ export interface BrowserDriver {
 }
 
 /** Short failure codes the bridge client may throw; anything else reports as browser_error. */
-const KNOWN_ERRORS = new Set(['browser_crashed', 'bad_tool_args', 'browser_not_installed', 'browser_timeout', 'mcp_error', 'unauthorized', 'tool_not_allowed', 'password_refused']);
+const KNOWN_ERRORS = new Set(['browser_crashed', 'bad_tool_args', 'browser_not_installed', 'browser_timeout', 'mcp_error', 'unauthorized', 'tool_not_allowed', 'password_refused', 'permission_denied', 'tab_closed', 'stale_ref', 'extension_missing', 'bad_url']);
 
 const MAX_STEPS = 8;
 const FIRST_STEP = /cancel|end membership|turn off|unsubscribe/i;

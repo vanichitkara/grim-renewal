@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "Grim Renewal Reaper",
+  "version": "0.1.0",
+  "description": "Lets the Grim Renewal site cancel a subscription in your own Chrome, one approved click at a time. Never types, never reads passwords.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvNJyPWEycxzt0G2LeAWjpzk69G3kkH20K51iqhrJT8Y7yb83twlMzVrWBbrqx9rCSqDM0fFJJqs6+i/eU23SnHGtUJ24uqJULSRTElMeSYm4nXwRWwQy1Tv/zOtWLTHhz3KLH7pr+dxKZllU9+IqjrFwQ5iGx9G/Wf+Xiizu9obQcTPJHlQ4LnFMrC+JNmYnDmXyiQD8Z6YqzvsF7C3Hb7Ns/Qe9BT1QeBdDaCNlijIucewmcHt5GJBvCqiYZ0M80b3w3eWeVjFsj3NxJwGApm45Cq0OENegljuaMMp8LElsiYc+zDBzqRoOWD1kRvgUD9QHsUAd+8YF9JqDrPqRmQIDAQAB",
+  "icons": { "16": "icons/icon16.png", "48": "icons/icon48.png", "128": "icons/icon128.png" },
+  "action": { "default_title": "Grim Renewal Reaper", "default_icon": { "16": "icons/icon16.png", "48": "icons/icon48.png" }, "default_popup": "popup.html" },
+  "background": { "service_worker": "background.js", "type": "module" },
+  "permissions": ["scripting", "storage"],
+  "optional_host_permissions": ["https://*/*", "http://*/*"],
+  "externally_connectable": {
+    "matches": ["https://vanichitkara.github.io/*", "http://localhost/*", "http://127.0.0.1/*"]
+  }
+}
